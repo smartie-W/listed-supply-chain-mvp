@@ -1,4 +1,3 @@
-// Frontend API endpoint. Empty means same-origin.
-// For GitHub Pages, set this to your backend public URL, e.g.:
-// window.APP_API_BASE = 'https://your-backend.example.com';
-window.APP_API_BASE = '';
+// Frontend API endpoint.
+// NOTE: this is a temporary tunnel endpoint.
+window.APP_API_BASE = 'https://2590e66b70be37.lhr.life';
