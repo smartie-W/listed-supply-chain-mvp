@@ -8,7 +8,15 @@ const els = {
   customerBody: document.querySelector('#customerBody'),
 };
 
-const API_BASE = (window.APP_API_BASE || '').replace(/\/+$/, '');
+const runtimeApi = (() => {
+  const byQuery = new URLSearchParams(window.location.search).get('api') || '';
+  const byStorage = localStorage.getItem('APP_API_BASE') || '';
+  const byConfig = window.APP_API_BASE || '';
+  const picked = byQuery || byStorage || byConfig || '';
+  if (byQuery) localStorage.setItem('APP_API_BASE', byQuery);
+  return picked;
+})();
+const API_BASE = runtimeApi.replace(/\/+$/, '');
 const apiUrl = (path) => `${API_BASE}${path}`;
 
 const state = {
@@ -27,6 +35,10 @@ init();
 function init() {
   wireEvents();
   resetAll();
+  if (!API_BASE && window.location.hostname.endsWith('github.io')) {
+    els.suggestions.innerHTML =
+      "<p class='empty'>当前是静态页面，未配置后端 API。请用带参数链接访问：<code>?api=https://你的后端域名</code></p>";
+  }
 }
 
 function wireEvents() {
