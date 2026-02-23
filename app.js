@@ -8,6 +8,9 @@ const els = {
   customerBody: document.querySelector('#customerBody'),
 };
 
+const API_BASE = (window.APP_API_BASE || '').replace(/\/+$/, '');
+const apiUrl = (path) => `${API_BASE}${path}`;
+
 const state = {
   suggestTimer: null,
   searchTimer: null,
@@ -53,7 +56,7 @@ async function renderSuggestions(q) {
   const ctl = new AbortController();
   state.suggestAbort = ctl;
   try {
-    const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`, { signal: ctl.signal });
+    const res = await fetch(apiUrl(`/api/suggest?q=${encodeURIComponent(q)}`), { signal: ctl.signal });
     if (!res.ok) throw new Error('suggest failed');
     if (seq !== state.suggestSeq) return;
     const data = await res.json();
@@ -98,7 +101,7 @@ async function runSearch(q) {
   }
   stopEtaTimer();
   setLoadingState();
-  const es = new EventSource(`/api/enrich-stream?q=${encodeURIComponent(q)}`);
+  const es = new EventSource(apiUrl(`/api/enrich-stream?q=${encodeURIComponent(q)}`));
   state.stream = es;
   let company = null;
   const progress = {
