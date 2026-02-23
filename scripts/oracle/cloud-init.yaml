@@ -1,0 +1,19 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+
+packages:
+  - curl
+  - git
+  - nginx
+  - build-essential
+
+runcmd:
+  - [ bash, -lc, "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -" ]
+  - [ bash, -lc, "apt-get install -y nodejs" ]
+  - [ bash, -lc, "npm install -g pm2" ]
+  - [ bash, -lc, "mkdir -p /var/www/listed-supply-chain-mvp /var/log/listed-supply-chain-mvp && chown -R ubuntu:ubuntu /var/www/listed-supply-chain-mvp /var/log/listed-supply-chain-mvp" ]
+  - [ bash, -lc, "cat >/etc/nginx/sites-available/listed-supply-chain-mvp <<'EOF'\nserver {\n    listen 80;\n    server_name _;\n    location / {\n        proxy_pass http://127.0.0.1:8090;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection \"upgrade\";\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}\nEOF" ]
+  - [ bash, -lc, "ln -sf /etc/nginx/sites-available/listed-supply-chain-mvp /etc/nginx/sites-enabled/listed-supply-chain-mvp && rm -f /etc/nginx/sites-enabled/default && nginx -t && systemctl restart nginx && systemctl enable nginx" ]
+
+final_message: "Oracle VM bootstrap done. Deploy app with scripts/oracle/deploy_remote.sh"
