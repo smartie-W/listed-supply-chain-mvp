@@ -8,15 +8,7 @@ const els = {
   customerBody: document.querySelector('#customerBody'),
 };
 
-const runtimeApi = (() => {
-  const byQuery = new URLSearchParams(window.location.search).get('api') || '';
-  const byStorage = localStorage.getItem('APP_API_BASE') || '';
-  const byConfig = window.APP_API_BASE || '';
-  const picked = byQuery || byStorage || byConfig || '';
-  if (byQuery) localStorage.setItem('APP_API_BASE', byQuery);
-  return picked;
-})();
-const API_BASE = runtimeApi.replace(/\/+$/, '');
+let API_BASE = '';
 const apiUrl = (path) => `${API_BASE}${path}`;
 
 const state = {
@@ -28,17 +20,15 @@ const state = {
   etaTimer: null,
   lastSearched: '',
   suggestAbort: null,
+  apiReady: Promise.resolve(),
 };
 
 init();
 
 function init() {
+  state.apiReady = ensureApiBase();
   wireEvents();
   resetAll();
-  if (!API_BASE && window.location.hostname.endsWith('github.io')) {
-    els.suggestions.innerHTML =
-      "<p class='empty'>当前是静态页面，未配置后端 API。请用带参数链接访问：<code>?api=https://你的后端域名</code></p>";
-  }
 }
 
 function wireEvents() {
@@ -63,6 +53,7 @@ function wireEvents() {
 }
 
 async function renderSuggestions(q) {
+  await state.apiReady;
   const seq = ++state.suggestSeq;
   if (state.suggestAbort) state.suggestAbort.abort();
   const ctl = new AbortController();
@@ -105,6 +96,7 @@ async function renderSuggestions(q) {
 }
 
 async function runSearch(q) {
+  await state.apiReady;
   state.lastSearched = q;
   const current = ++state.seq;
   if (state.stream) {
@@ -205,6 +197,59 @@ async function runSearch(q) {
     es.close();
     if (state.stream === es) state.stream = null;
   });
+}
+
+function normalizeBase(x) {
+  return String(x || '').trim().replace(/\/+$/, '');
+}
+
+function getApiCandidates() {
+  const byQuery = normalizeBase(new URLSearchParams(window.location.search).get('api') || '');
+  const byStorage = normalizeBase(localStorage.getItem('APP_API_BASE') || '');
+  const byConfigSingle = normalizeBase(window.APP_API_BASE || '');
+  const byConfigList = Array.isArray(window.APP_API_BASES) ? window.APP_API_BASES.map(normalizeBase) : [];
+  const out = [];
+  [byQuery, byStorage, byConfigSingle, ...byConfigList].forEach((x) => {
+    if (x && !out.includes(x)) out.push(x);
+  });
+  if (byQuery) localStorage.setItem('APP_API_BASE', byQuery);
+  return out;
+}
+
+function timeoutSignal(ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  return { signal: ctl.signal, clear: () => clearTimeout(t) };
+}
+
+async function checkApiHealth(base) {
+  const t = timeoutSignal(2800);
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: t.signal });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    return !!data?.ok;
+  } catch {
+    return false;
+  } finally {
+    t.clear();
+  }
+}
+
+async function ensureApiBase() {
+  const candidates = getApiCandidates();
+  for (const base of candidates) {
+    if (await checkApiHealth(base)) {
+      API_BASE = base;
+      localStorage.setItem('APP_API_BASE', base);
+      return;
+    }
+  }
+  API_BASE = candidates[0] || '';
+  if (!API_BASE && window.location.hostname.endsWith('github.io')) {
+    els.suggestions.innerHTML =
+      "<p class='empty'>当前未配置可用后端。请使用链接参数：<code>?api=https://你的后端域名</code></p>";
+  }
 }
 
 function setLoadingState() {

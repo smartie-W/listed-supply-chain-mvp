@@ -1,3 +1,6 @@
-// Frontend API endpoint.
-// NOTE: this is a temporary tunnel endpoint.
-window.APP_API_BASE = 'https://732118d01853ce99-116-235-145-49.serveousercontent.com';
+// Fixed backend candidates (primary + backup).
+// Replace with your long-term cloud domain later.
+window.APP_API_BASES = [
+  'https://732118d01853ce99-116-235-145-49.serveousercontent.com',
+  'https://2590e66b70be37.lhr.life',
+];
