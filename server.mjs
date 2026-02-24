@@ -813,6 +813,34 @@ function filterByEvidenceTier(rows = []) {
   });
 }
 
+function inferIndustryByCompanyName(name = '') {
+  const s = String(name || '').replace(/\s+/g, '');
+  if (!s) return null;
+  const rules = [
+    { re: /(证券|期货|基金|资管|投顾)/, l1: '金融', l2: '证券与期货' },
+    { re: /(银行|农商行|城商行)/, l1: '金融', l2: '银行' },
+    { re: /(保险|寿险|财险)/, l1: '金融', l2: '保险' },
+    { re: /(半导体|芯片|集成电路|微电子|传感器)/, l1: '电子信息', l2: '半导体芯片' },
+    { re: /(电子|通信|消费电子)/, l1: '电子信息', l2: '消费电子' },
+    { re: /(软件|信息技术|数字|网络|云|数据|人工智能|科技)/, l1: '信息技术', l2: '软件开发' },
+    { re: /(自动化|机器人|装备|机械|智造|工业控制)/, l1: '工业', l2: '智能制造' },
+    { re: /(汽车|车载|智驾|座舱|零部件)/, l1: '汽车', l2: '汽车供应链' },
+    { re: /(电网|输配电|电气|电力|能源)/, l1: '能源电力', l2: '电网设备' },
+    { re: /(医疗|医药|生物|器械|医院)/, l1: '医疗健康', l2: '医疗器械与服务' },
+    { re: /(化工|化学|材料|纤维)/, l1: '材料', l2: '化学纤维' },
+  ];
+  const hit = rules.find((x) => x.re.test(s));
+  if (!hit) return null;
+  const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === hit.l2);
+  return {
+    industryLevel1: hit.l1,
+    industryLevel2: hit.l2,
+    industryName: hit.l2,
+    upstream: item?.upstream || ['原材料', '设备', '技术服务'],
+    downstream: item?.downstream || ['企业客户', '渠道客户'],
+  };
+}
+
 function classifyIndustryDetailed(input = '') {
   const text = String(input || '').replace(/\s+/g, ' ').trim().slice(0, 240);
   const plain = text.replace(/\s+/g, '');
@@ -887,6 +915,8 @@ function classifyIndustryDetailed(input = '') {
     }
   }
   if (!best) {
+    const byName = inferIndustryByCompanyName(text);
+    if (byName) return byName;
     return {
       industryLevel1: '综合',
       industryLevel2: '综合行业',
