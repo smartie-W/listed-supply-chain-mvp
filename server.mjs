@@ -215,6 +215,27 @@ const COMPANY_CODE_ALIASES = {
   '002475': ['立讯精密', '消费电子'],
   '300124': ['汇川技术', '工业自动化', '智能制造'],
 };
+const SHORT_QUERY_OVERRIDES = [
+  { aliases: ['银河', '银河证券'], code: '601881', shortName: '中国银河', fullName: '中国银河证券股份有限公司' },
+  { aliases: ['中泰', '中泰证券'], code: '600918', shortName: '中泰证券', fullName: '中泰证券股份有限公司' },
+  { aliases: ['光大', '光大证券'], code: '601788', shortName: '光大证券', fullName: '光大证券股份有限公司' },
+  { aliases: ['华泰证券', '华泰'], code: '601688', shortName: '华泰证券', fullName: '华泰证券股份有限公司' },
+  { aliases: ['中信证券', '中信'], code: '600030', shortName: '中信证券', fullName: '中信证券股份有限公司' },
+  { aliases: ['广发证券', '广发'], code: '000776', shortName: '广发证券', fullName: '广发证券股份有限公司' },
+];
+
+function manualSuggestRows(query = '') {
+  const qn = normalizeName(query);
+  if (!qn) return [];
+  return SHORT_QUERY_OVERRIDES.filter((x) => x.aliases.some((a) => normalizeName(a).includes(qn) || qn.includes(normalizeName(a))))
+    .map((x) => ({
+      code: x.code,
+      name: x.shortName,
+      secid: mapSecId(x.code),
+      displayName: x.fullName,
+      aliases: x.aliases,
+    }));
+}
 const FINANCIAL_REVIEW_INDUSTRIES = new Set(['银行业', '证券业', '基金管理', '期货业', '交易所与清算基础设施', '金融科技']);
 const FINANCIAL_PEER_LIBRARY = {
   银行业: [
@@ -2785,6 +2806,9 @@ async function resolveCompanyContext(q) {
   }
   const strictLegalQuery = shouldUseStrictSuggestMatch(query);
   const sugg = [];
+  for (const m of manualSuggestRows(query)) {
+    sugg.push({ code: m.code, name: m.name, secid: m.secid });
+  }
   const firstQueries = buildSuggestQueries(query).slice(0, 3);
   const firstRows = await Promise.all(firstQueries.map((item) => withTimeout(eastmoneySuggest(item, 8), 900, [])));
   for (const rows of firstRows) {
@@ -3040,6 +3064,7 @@ const server = http.createServer(async (req, res) => {
     const suggestCacheKey = `suggestFast:${q}`;
     const cached = cacheGet(suggestCacheKey);
     if (cached) return json(res, cached);
+    const manualRows = manualSuggestRows(q);
     const strictLegalQuery = shouldUseStrictSuggestMatch(q);
     const localFast = fastLocalSuggest(q, 12);
     const qNormLen = normalizeName(q).length;
@@ -3100,7 +3125,7 @@ const server = http.createServer(async (req, res) => {
     const merged = [];
     const seen = new Set();
 
-    for (const r of [...remote, ...local, ...localNames, ...webNames]) {
+    for (const r of [...manualRows, ...remote, ...local, ...localNames, ...webNames]) {
       const key = `${r.code || 'NOCODE'}-${r.name}`;
       if (!r.name || seen.has(key)) continue;
       // Only keep A-share entities for online suggestion to avoid stock short names and derivatives.
