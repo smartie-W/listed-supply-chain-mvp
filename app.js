@@ -23,6 +23,8 @@ const state = {
   apiReady: Promise.resolve(),
   apiCandidates: [],
   apiIndex: 0,
+  offlineMode: false,
+  localCompanies: [],
 };
 
 init();
@@ -56,6 +58,10 @@ function wireEvents() {
 
 async function renderSuggestions(q) {
   await state.apiReady;
+  if (state.offlineMode || !API_BASE) {
+    renderLocalSuggestions(q);
+    return;
+  }
   const seq = ++state.suggestSeq;
   if (state.suggestAbort) state.suggestAbort.abort();
   const ctl = new AbortController();
@@ -101,12 +107,17 @@ async function renderSuggestions(q) {
       renderSuggestions(q);
       return;
     }
-    els.suggestions.innerHTML = "<p class='empty'>联网建议接口不可用，请稍后再试。</p>";
+    state.offlineMode = true;
+    renderLocalSuggestions(q);
   }
 }
 
 async function runSearch(q, retry = 0) {
   await state.apiReady;
+  if (state.offlineMode || !API_BASE) {
+    runLocalSearch(q);
+    return;
+  }
   state.lastSearched = q;
   const current = ++state.seq;
   if (state.stream) {
@@ -220,12 +231,13 @@ function normalizeBase(x) {
 }
 
 function getApiCandidates() {
+  const bySameOrigin = window.location.hostname.endsWith('github.io') ? '' : normalizeBase(window.location.origin || '');
   const byQuery = normalizeBase(new URLSearchParams(window.location.search).get('api') || '');
   const byStorage = normalizeBase(localStorage.getItem('APP_API_BASE') || '');
   const byConfigSingle = normalizeBase(window.APP_API_BASE || '');
   const byConfigList = Array.isArray(window.APP_API_BASES) ? window.APP_API_BASES.map(normalizeBase) : [];
   const out = [];
-  [byQuery, byStorage, byConfigSingle, ...byConfigList].forEach((x) => {
+  [byQuery, byStorage, bySameOrigin, byConfigSingle, ...byConfigList].forEach((x) => {
     if (x && !out.includes(x)) out.push(x);
   });
   if (byQuery) localStorage.setItem('APP_API_BASE', byQuery);
@@ -266,19 +278,24 @@ async function ensureApiBase() {
   const candidates = getApiCandidates();
   state.apiCandidates = candidates;
   state.apiIndex = 0;
-  for (let i = 0; i < candidates.length; i += 1) {
-    const base = candidates[i];
-    if (await checkApiHealth(base)) {
-      state.apiIndex = i;
-      API_BASE = base;
-      localStorage.setItem('APP_API_BASE', base);
-      return;
-    }
+  if (!candidates.length) {
+    API_BASE = '';
+    state.offlineMode = true;
+    return;
   }
-  API_BASE = candidates[0] || '';
-  if (!API_BASE && window.location.hostname.endsWith('github.io')) {
-    els.suggestions.innerHTML =
-      "<p class='empty'>当前未配置可用后端。请使用链接参数：<code>?api=https://你的后端域名</code></p>";
+  const checks = await Promise.all(candidates.map((base) => checkApiHealth(base)));
+  const firstOk = checks.findIndex(Boolean);
+  if (firstOk >= 0) {
+    state.apiIndex = firstOk;
+    API_BASE = candidates[firstOk];
+    state.offlineMode = false;
+    localStorage.setItem('APP_API_BASE', API_BASE);
+    return;
+  }
+  API_BASE = '';
+  state.offlineMode = true;
+  if (window.location.hostname.endsWith('github.io')) {
+    els.suggestions.innerHTML = "<p class='hint'>当前处于离线模式：可检索本地企业库。配置后端后可展示联网结果。</p>";
   }
 }
 
@@ -478,6 +495,12 @@ function parseEventData(ev) {
   }
 }
 
+function normalizeStockCode(raw = '') {
+  return String(raw || '')
+    .replace(/\.(SH|SZ)$/i, '')
+    .replace(/\..*$/, '');
+}
+
 function startEtaTimer(progress) {
   stopEtaTimer();
   state.etaTimer = setInterval(() => {
@@ -511,4 +534,174 @@ function looksLikeFullCompanyName(q = '') {
   const s = String(q || '').trim();
   if (!s) return false;
   return /(有限责任公司|股份有限公司|集团有限公司|集团股份有限公司|有限公司|交易所|银行|证券|期货|基金)/.test(s);
+}
+
+function normalizeCompanyToken(s = '') {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[()（）\s\-_.]/g, '')
+    .replace(/(有限责任公司|股份有限公司|集团有限公司|集团股份有限公司|有限公司|集团|股份|公司)$/g, '');
+}
+
+function getLocalCompanies() {
+  if (state.localCompanies.length) return state.localCompanies;
+  const rows = Array.isArray(window.COMPANIES) ? window.COMPANIES : [];
+  state.localCompanies = rows.map((x) => {
+    const aliases = Array.isArray(x.aliases) ? x.aliases.filter(Boolean) : [];
+    return {
+      ...x,
+      name: x.fullName || x.shortName || '',
+      shortName: x.shortName || '',
+      aliasTokens: [x.fullName || '', x.shortName || '', ...aliases].map(normalizeCompanyToken).filter(Boolean),
+    };
+  });
+  return state.localCompanies;
+}
+
+function rankLocalCompanies(q) {
+  const token = normalizeCompanyToken(q);
+  if (!token) return [];
+  const rows = getLocalCompanies();
+  const scored = [];
+  for (const c of rows) {
+    let score = 0;
+    const full = normalizeCompanyToken(c.fullName || c.name || '');
+    const short = normalizeCompanyToken(c.shortName || '');
+    if (full === token) score += 120;
+    if (short === token) score += 110;
+    if (full.startsWith(token)) score += 80;
+    if (short.startsWith(token)) score += 70;
+    if (full.includes(token)) score += 50;
+    if (short.includes(token)) score += 40;
+    for (const a of c.aliasTokens || []) {
+      if (a === token) score += 55;
+      else if (a.includes(token) || token.includes(a)) score += 22;
+    }
+    if (score > 0) scored.push({ company: c, score });
+  }
+  scored.sort((a, b) => b.score - a.score || Number(b.company.revenue || 0) - Number(a.company.revenue || 0));
+  return scored.map((x) => x.company);
+}
+
+function renderLocalSuggestions(q) {
+  const rows = rankLocalCompanies(q).slice(0, 8);
+  if (!rows.length) {
+    els.suggestions.innerHTML = '';
+    return;
+  }
+  els.suggestions.innerHTML = rows
+    .map(
+      (x) => `
+      <button class="suggestion" data-name="${escapeAttr(x.fullName || x.name || '')}">
+        ${escapeHtml(x.fullName || x.name || '-')}
+      </button>
+    `,
+    )
+    .join('');
+  [...els.suggestions.querySelectorAll('.suggestion')].forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.name || '';
+      els.input.value = name;
+      els.suggestions.innerHTML = '';
+      clearTimeout(state.searchTimer);
+      runLocalSearch(name);
+    });
+  });
+}
+
+function toRelationRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((x) => ({
+    name: x.name,
+    reason: x.reason || '',
+    amount: x.amount,
+    ratio: Number.isFinite(x.ratio) ? `${x.ratio}%` : '',
+    confidence: Number.isFinite(x.confidence) ? x.confidence : 0.7,
+    sourceTier: 'tier2',
+    evidenceCount: Number.isFinite(x.evidenceCount) ? x.evidenceCount : undefined,
+    source: x.source || '',
+  }));
+}
+
+function runLocalSearch(q) {
+  state.lastSearched = q;
+  stopEtaTimer();
+  const rows = rankLocalCompanies(q);
+  const c = rows[0];
+  if (!c) {
+    els.overview.classList.remove('hidden');
+    els.overview.innerHTML = `
+      <h2>${escapeHtml(q)}</h2>
+      <ul class="kv">
+        <li><span>证券代码</span>-</li>
+        <li><span>一级行业</span>未识别</li>
+        <li><span>二级行业</span>未识别</li>
+        <li><span>官网</span>未识别</li>
+        <li><span>财年</span>未获取</li>
+        <li><span>营业收入</span>未获取</li>
+      </ul>
+    `;
+    els.competitorBody.innerHTML = "<p class='empty'>离线模式暂无该企业竞争对手数据</p>";
+    els.top5Body.innerHTML = "<p class='empty'>离线模式暂无该行业 Top5 数据</p>";
+    els.supplierBody.innerHTML = "<p class='empty'>离线模式暂无该企业供应商数据</p>";
+    els.customerBody.innerHTML = "<p class='empty'>离线模式暂无该企业客户数据</p>";
+    return;
+  }
+  const company = {
+    name: c.fullName || c.name || '',
+    code: normalizeStockCode(c.stockCode || '') || '-',
+    industryLevel1: c.industryLevel1 || inferLevel1(c.industryName || c.industryLevel2 || ''),
+    industryLevel2: c.industryLevel2 || c.industryName || '未识别',
+    industryName: c.industryName || c.industryLevel2 || '未识别',
+    website: c.website || '',
+    fiscalYear: c.fiscalYear || '',
+    revenue: Number(c.revenue || 0),
+    isListed: !!c.stockCode,
+  };
+  renderOverview(company);
+  const rel = c.relations || {};
+  const localTop = getLocalIndustryTop(company.industryLevel2 || company.industryName || '', c);
+  const localPeers = toRelationRows(rel.competitors || []).map((x) => ({ ...x, reportCount: 0, brokerCount: 0 }));
+  const fallbackPeers = !localPeers.length ? localTop.filter((x) => x.code !== company.code).slice(0, 5).map((x) => ({ name: x.name, reason: '同属本地行业样本', confidence: 0.55 })) : localPeers;
+  renderCompetitors(fallbackPeers);
+  renderTop5(localTop, company);
+  renderSuppliers(toRelationRows(rel.suppliers || []));
+  renderCustomers(toRelationRows(rel.customers || []));
+}
+
+function inferLevel1(industryL2 = '') {
+  const s = String(industryL2 || '');
+  if (/(半导体|芯片|电子|消费电子|通信|软件|信息|互联网|云|大数据|人工智能|网络安全)/.test(s)) return '电子信息';
+  if (/(汽车|座舱|智驾|网联)/.test(s)) return '汽车';
+  if (/(银行|证券|保险|基金|期货|信托)/.test(s)) return '金融';
+  if (/(制造|自动化|设备|机械|工业|装备)/.test(s)) return '工业';
+  if (/(化工|纤维|材料|金属|矿|钢|有色)/.test(s)) return '材料';
+  if (/(电力|电网|能源|燃气|水务)/.test(s)) return '能源电力';
+  return '综合';
+}
+
+function getLocalIndustryTop(industryL2, selfCompany) {
+  const target = String(industryL2 || '').trim();
+  const rows = getLocalCompanies().filter((x) => String(x.industryLevel2 || x.industryName || '').trim() === target);
+  const all = rows.length ? rows : getLocalCompanies().filter((x) => String(x.industryName || '').trim() === String(selfCompany.industryName || '').trim());
+  const sorted = all
+    .filter((x) => Number.isFinite(Number(x.revenue)) && Number(x.revenue) > 0)
+    .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
+  const out = sorted.slice(0, 5).map((x) => ({
+    name: x.shortName || x.fullName || x.name || '-',
+    code: normalizeStockCode(x.stockCode || '') || '-',
+    revenue: Number(x.revenue || 0),
+    fiscalYear: x.fiscalYear || selfCompany.fiscalYear || '',
+  }));
+  const selfCode = normalizeStockCode(selfCompany.stockCode || '');
+  if (selfCode && !out.some((x) => String(x.code) === selfCode) && Number(selfCompany.revenue || 0) > 0) {
+    out.push({
+      name: selfCompany.shortName || selfCompany.fullName || '-',
+      code: selfCode,
+      revenue: Number(selfCompany.revenue || 0),
+      fiscalYear: selfCompany.fiscalYear || '',
+    });
+    out.sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
+  }
+  return out.slice(0, 5);
 }
