@@ -27,13 +27,24 @@ const state = {
   apiIndex: 0,
   offlineMode: false,
   localCompanies: [],
+  initCheckTimer: null,
 };
 
 init();
 
 function init() {
   setNetworkStatus('checking');
-  state.apiReady = ensureApiBase();
+  if (state.initCheckTimer) clearTimeout(state.initCheckTimer);
+  state.initCheckTimer = setTimeout(() => {
+    if (!API_BASE) setNetworkStatus('offline');
+  }, 3000);
+  state.apiReady = ensureApiBase().finally(() => {
+    if (state.initCheckTimer) {
+      clearTimeout(state.initCheckTimer);
+      state.initCheckTimer = null;
+    }
+    if (!API_BASE) setNetworkStatus('offline');
+  });
   wireEvents();
   resetAll();
 }
