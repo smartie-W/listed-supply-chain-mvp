@@ -1,6 +1,6 @@
 // Public backend candidates.
 // Keep empty by default to avoid stale tunnel domains; use ?api=... to inject.
-window.APP_API_BASES = ['https://orbit-printers-yields-agent.trycloudflare.com'];
+window.APP_API_BASES = ['https://api.gstpcx.online'];
 
 // Safety switch:
 // false = never show offline demo relations/revenue (avoid fake-looking data in production pages).
