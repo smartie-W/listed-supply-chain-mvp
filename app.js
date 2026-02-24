@@ -10,6 +10,7 @@ const els = {
 
 let API_BASE = '';
 const apiUrl = (path) => `${API_BASE}${path}`;
+const ALLOW_OFFLINE_DEMO = !!window.ENABLE_OFFLINE_DEMO;
 
 const state = {
   suggestTimer: null,
@@ -59,7 +60,11 @@ function wireEvents() {
 async function renderSuggestions(q) {
   await state.apiReady;
   if (state.offlineMode || !API_BASE) {
-    renderLocalSuggestions(q);
+    if (ALLOW_OFFLINE_DEMO) {
+      renderLocalSuggestions(q);
+    } else {
+      els.suggestions.innerHTML = '';
+    }
     return;
   }
   const seq = ++state.suggestSeq;
@@ -115,7 +120,8 @@ async function renderSuggestions(q) {
 async function runSearch(q, retry = 0) {
   await state.apiReady;
   if (state.offlineMode || !API_BASE) {
-    runLocalSearch(q);
+    if (ALLOW_OFFLINE_DEMO) runLocalSearch(q);
+    else renderOfflineUnavailable(q);
     return;
   }
   state.lastSearched = q;
@@ -295,7 +301,7 @@ async function ensureApiBase() {
   API_BASE = '';
   state.offlineMode = true;
   if (window.location.hostname.endsWith('github.io')) {
-    els.suggestions.innerHTML = "<p class='hint'>当前处于离线模式：可检索本地企业库。配置后端后可展示联网结果。</p>";
+    els.suggestions.innerHTML = "<p class='hint'>当前未连接后端，暂不可联网查询。请使用参数：<code>?api=https://你的后端域名</code></p>";
   }
 }
 
@@ -704,4 +710,24 @@ function getLocalIndustryTop(industryL2, selfCompany) {
     out.sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
   }
   return out.slice(0, 5);
+}
+
+function renderOfflineUnavailable(q) {
+  const name = String(q || '').trim() || '未识别企业';
+  els.overview.classList.remove('hidden');
+  els.overview.innerHTML = `
+    <h2>${escapeHtml(name)}</h2>
+    <ul class="kv">
+      <li><span>证券代码</span>-</li>
+      <li><span>一级行业</span>未联网</li>
+      <li><span>二级行业</span>未联网</li>
+      <li><span>官网</span>未联网</li>
+      <li><span>财年</span>未联网</li>
+      <li><span>营业收入</span>未联网</li>
+    </ul>
+  `;
+  els.competitorBody.innerHTML = "<p class='empty'>未连接后端，无法查询竞争对手</p>";
+  els.top5Body.innerHTML = "<p class='empty'>未连接后端，无法查询行业 Top5</p>";
+  els.supplierBody.innerHTML = "<p class='empty'>未连接后端，无法查询供应商</p>";
+  els.customerBody.innerHTML = "<p class='empty'>未连接后端，无法查询客户</p>";
 }
