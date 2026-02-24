@@ -19,9 +19,23 @@ const SEARCH_ENGINE_HOSTS = new Set([
   'cn.bing.com',
   'bing.com',
   'www.bing.com',
+  'sogou.com',
+  'www.sogou.com',
+  'so.com',
+  'www.so.com',
   'r.jina.ai',
   'aiqicha.baidu.com',
 ]);
+const ENTERPRISE_INFO_DOMAIN_TAILS = [
+  'qcc.com',
+  'qichacha.com',
+  'tianyancha.com',
+  'aiqicha.baidu.com',
+  'qixin.com',
+  'xin.baidu.com',
+  'cha.11467.com',
+  'b2b.baidu.com',
+];
 function withTimeout(promise, ms, fallback) {
   return Promise.race([
     promise,
@@ -674,7 +688,9 @@ function normalizeDomain(host = '') {
 
 function isSearchOrPortalDomain(host = '') {
   const h = normalizeDomain(host);
+  const isEnterpriseInfo = ENTERPRISE_INFO_DOMAIN_TAILS.some((x) => h === x || h.endsWith(`.${x}`));
   return (
+    isEnterpriseInfo ||
     SEARCH_ENGINE_HOSTS.has(h) ||
     h.endsWith('.baidu.com') ||
     h.endsWith('.bing.com') ||
@@ -822,7 +838,9 @@ function inferIndustryByCompanyName(name = '') {
     { re: /(保险|寿险|财险)/, l1: '金融', l2: '保险' },
     { re: /(半导体|芯片|集成电路|微电子|传感器)/, l1: '电子信息', l2: '半导体芯片' },
     { re: /(电子|通信|消费电子)/, l1: '电子信息', l2: '消费电子' },
-    { re: /(软件|信息技术|数字|网络|云|数据|人工智能|科技)/, l1: '信息技术', l2: '软件开发' },
+    { re: /(网络安全|信息安全|安全技术|安全服务|等保)/, l1: '信息技术', l2: 'IT服务' },
+    { re: /(系统集成|信息系统|运维|技术服务|解决方案|咨询服务|集成服务)/, l1: '信息技术', l2: 'IT服务' },
+    { re: /(软件|信息技术|数字|网络|云|数据|人工智能|科技|计算机|平台)/, l1: '信息技术', l2: '软件开发' },
     { re: /(自动化|机器人|装备|机械|智造|工业控制)/, l1: '工业', l2: '智能制造' },
     { re: /(汽车|车载|智驾|座舱|零部件)/, l1: '汽车', l2: '汽车供应链' },
     { re: /(电网|输配电|电气|电力|能源)/, l1: '能源电力', l2: '电网设备' },
@@ -1409,10 +1427,128 @@ async function discoverOfficialWebsite(companyName) {
         break;
       }
     }
+    if (!best) {
+      const sogouUrls = await discoverOfficialWebsiteFromSogou(q);
+      for (const cand of sogouUrls.slice(0, 6)) {
+        if (await verifyOfficialWebsiteForCompany(cand, q)) {
+          best = cand;
+          break;
+        }
+      }
+    }
+    if (!best) {
+      const mirrorUrls = await discoverOfficialWebsiteFromMirror(q);
+      for (const cand of mirrorUrls.slice(0, 6)) {
+        if (await verifyOfficialWebsiteForCompany(cand, q)) {
+          best = cand;
+          break;
+        }
+      }
+    }
     cacheSet(key, best, 60 * 60 * 1000);
     return best;
   } catch {
+    const sogouUrls = await discoverOfficialWebsiteFromSogou(q);
+    for (const cand of sogouUrls.slice(0, 4)) {
+      if (await verifyOfficialWebsiteForCompany(cand, q)) return cand;
+    }
+    const mirrorUrls = await discoverOfficialWebsiteFromMirror(q);
+    for (const cand of mirrorUrls.slice(0, 4)) {
+      if (await verifyOfficialWebsiteForCompany(cand, q)) return cand;
+    }
     return '';
+  }
+}
+
+async function discoverOfficialWebsiteFromSogou(companyName = '') {
+  const q = String(companyName || '').trim();
+  if (!q) return [];
+  const key = `officialSiteSogou:${q}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
+  const url = `https://www.sogou.com/web?query=${encodeURIComponent(`${q} 官网`)}`;
+  try {
+    const html = await withTimeout(fetchText(url), 10000, '');
+    const urls = [];
+    const pushUrl = (x = '') => {
+      const u = sanitizeUrl(String(x || '').replace(/&amp;/g, '&'));
+      if (!u) return;
+      try {
+        const o = new URL(u);
+        const host = normalizeDomain(o.hostname);
+        if (!host || isSearchOrPortalDomain(host)) return;
+        urls.push(`${o.protocol}//${o.host}/`);
+      } catch {
+        // ignore
+      }
+    };
+    for (const m of String(html || '').matchAll(/data-url="(https?:\/\/[^"]+)"/gi)) pushUrl(m[1]);
+    for (const m of String(html || '').matchAll(/<cite[^>]*>([^<]+)<\/cite>/gi)) {
+      const txt = String(m[1] || '').replace(/&nbsp;.*$/g, '').trim();
+      if (!txt) continue;
+      if (/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(txt)) pushUrl(`https://${txt}`);
+    }
+    const out = [...new Set(urls)].slice(0, 10);
+    cacheSet(key, out, 60 * 60 * 1000);
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+async function discoverOfficialWebsiteFromMirror(companyName = '') {
+  const q = String(companyName || '').trim();
+  if (!q) return [];
+  const key = `officialSiteMirror:${q}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
+  try {
+    const txt = await withTimeout(fetchMirrorSearchText(`${q} 官网`), 10000, '');
+    const lines = splitUsefulLines(txt).slice(0, 400);
+    const core = coreCompanyName(q);
+    const scored = [];
+    const pushUrl = (u = '', ctx = '') => {
+      const clean = sanitizeUrl(u);
+      if (!clean) return;
+      try {
+        const o = new URL(clean);
+        const host = normalizeDomain(o.hostname);
+        if (!host || isSearchOrPortalDomain(host)) return;
+        const hasCompanyHint = ctx.includes(q) || (core && ctx.includes(core)) || /官网|官方网站|官方|网站/.test(ctx);
+        if (!hasCompanyHint) return;
+        let score = 1;
+        if (o.pathname === '/' || o.pathname === '') score += 2;
+        if (/\.(com|cn)$/.test(host)) score += 1;
+        if (/官网|官方网站|官方/.test(ctx)) score += 3;
+        if (ctx.includes(q)) score += 2;
+        if (core && host.includes(normalizeName(core).slice(0, 4).toLowerCase())) score += 1;
+        scored.push({ url: `${o.protocol}//${o.host}/`, score });
+      } catch {
+        // ignore
+      }
+    };
+    for (const ln of lines) {
+      for (const m of ln.matchAll(/https?:\/\/[^\s)\]]+/g)) pushUrl(m[0], ln);
+    }
+    for (const ln of lines) {
+      if (!/官网|官方网站|网站|网址/.test(ln)) continue;
+      for (const m of ln.matchAll(/\b([A-Za-z0-9.-]+\.(?:com|cn|com\.cn|net|org|io))\b/gi)) {
+        pushUrl(`https://${m[1]}`, ln);
+      }
+    }
+    scored.sort((a, b) => b.score - a.score);
+    const out = [];
+    const seen = new Set();
+    for (const item of scored) {
+      if (seen.has(item.url)) continue;
+      seen.add(item.url);
+      out.push(item.url);
+      if (out.length >= 10) break;
+    }
+    cacheSet(key, out, 60 * 60 * 1000);
+    return out;
+  } catch {
+    return [];
   }
 }
 
@@ -1501,7 +1637,7 @@ async function verifyOfficialWebsiteForCompany(site, companyName) {
   const core = coreCompanyName(q);
   const hasFull = txt.includes(q);
   const hasCore = core && txt.includes(core);
-  const hasOfficialMark = /(公司简介|联系我们|版权所有|copyright|关于我们)/i.test(txt);
+  const hasOfficialMark = /(公司简介|联系我们|版权所有|copyright|关于我们|ICP备|备案号|隐私政策|服务条款)/i.test(txt);
   return Boolean((hasFull || hasCore) && hasOfficialMark);
 }
 
@@ -1706,7 +1842,7 @@ async function officialSiteCustomers(companyName, limit = 20) {
   } catch {
     return { site: '', rows: [] };
   }
-  const paths = ['/', '/customer', '/customers', '/case', '/cases', '/partner', '/partners', '/solution', '/industry'];
+  const paths = ['/', '/customer', '/customers', '/case', '/cases', '/partner', '/partners', '/solution', '/industry', '/about', '/aboutus', '/about-us', '/company'];
   const pages = await Promise.all(paths.map((p) => fetchSiteText(`${origin}${p}`)));
   const names = extractCaseCustomerNames(pages.join('\n'), companyName, limit);
   const rows = names.slice(0, limit).map((name) => evidenceRow(name, {
@@ -3309,15 +3445,20 @@ const server = http.createServer(async (req, res) => {
     const { candidate, secid, profile, nonListed } = ctx;
     const code = profile.code || candidate.code || '';
 
-    const [revenue, brokerMeta, annual, financing] = await Promise.all([
+    const [revenue, brokerMeta, annual, financing, discoveredSite, webIndustryHint] = await Promise.all([
       code ? withTimeout(fetchRevenue(code), 3000, { revenue: null, fiscalYear: null, source: '' }) : Promise.resolve({ revenue: null, fiscalYear: null, source: '' }),
       code ? withTimeout(brokerMetaForStock(code), 2500, { indvInduCode: '', indvInduName: '' }) : Promise.resolve({ indvInduCode: '', indvInduName: '' }),
       code ? withTimeout(extractAnnualRelations(code, 2024), 6500, { customers: [], suppliers: [], meta: { found: false } }) : Promise.resolve({ customers: [], suppliers: [], meta: { found: false } }),
       nonListed ? withTimeout(fetchNonListedFinancing(profile.name || candidate.name, 6), 3500, { roundsCount: null, events: [], source: '' }) : Promise.resolve({ roundsCount: null, events: [], source: '' }),
+      nonListed && !profile.website ? withTimeout(discoverOfficialWebsite(profile.name || candidate.name), 5000, '') : Promise.resolve(profile.website || ''),
+      nonListed ? withTimeout(inferIndustryByWeb(profile.name || candidate.name), 8000, '') : Promise.resolve(''),
     ]);
     const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
     const industryName = brokerMeta.indvInduName || profile.industryName || '';
-    const industry = classifyIndustryDetailed(`${profile.name || candidate.name || ''} ${industryName || profile.industryName || ''}`.trim());
+    const website = profile.website || discoveredSite || '';
+    const industry = classifyIndustryDetailed(
+      `${profile.name || candidate.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim(),
+    );
     const isFinancialReviewIndustry = FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2);
     const isChina500Fast = Boolean(findChina500ByName(profile.name || candidate.name || q));
     const consultingIntel = isFinancialReviewIndustry
@@ -3457,7 +3598,7 @@ const server = http.createServer(async (req, res) => {
         industryLevel1: industry.industryLevel1,
         industryLevel2: industry.industryLevel2,
         industryCode: industryCode || profile.industryCode || '',
-        website: profile.website || '',
+        website,
         revenue: revenue.revenue,
         fiscalYear: revenue.fiscalYear,
         revenueSource: revenue.source,
@@ -3474,6 +3615,7 @@ const server = http.createServer(async (req, res) => {
         suggest: 'eastmoney_searchapi',
         profile: 'eastmoney_push2',
         revenue: revenue.source || 'not_found',
+        website: website ? 'official_site_probe' : 'not_found',
         customers: annual.customers?.length ? 'annual_report_pdf' : 'web_suggest_fallback',
         suppliers: annual.suppliers?.length ? 'annual_report_pdf' : 'web_suggest_fallback',
         annualReport: annual.meta || { found: false },
@@ -3542,6 +3684,12 @@ const server = http.createServer(async (req, res) => {
       const pFinancing = nonListed
         ? withTimeout(fetchNonListedFinancing(baseCompany.name, 6), 4000, { roundsCount: null, events: [], source: '' })
         : Promise.resolve({ roundsCount: null, events: [], source: '' });
+      const pWebsite = nonListed && !profile.website
+        ? withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '')
+        : Promise.resolve(profile.website || '');
+      const pWebIndustry = nonListed
+        ? withTimeout(inferIndustryByWeb(baseCompany.name), 8000, '')
+        : Promise.resolve('');
 
       pRevenue
         .then((revenue) => {
@@ -3565,13 +3713,39 @@ const server = http.createServer(async (req, res) => {
           });
         })
         .catch(() => {});
+      pWebsite
+        .then((site) => {
+          if (!site) return;
+          sseWrite(res, 'company_update', {
+            company: {
+              ...baseCompany,
+              website: site,
+            },
+          });
+        })
+        .catch(() => {});
+      pWebIndustry
+        .then((l2) => {
+          if (!l2) return;
+          const refined = classifyIndustryDetailed(`${baseCompany.name} ${l2}`);
+          sseWrite(res, 'company_update', {
+            company: {
+              ...baseCompany,
+              industryName: refined.industryName || baseCompany.industryName,
+              industryLevel1: refined.industryLevel1 || baseCompany.industryLevel1,
+              industryLevel2: refined.industryLevel2 || baseCompany.industryLevel2,
+            },
+          });
+        })
+        .catch(() => {});
 
       const top5Task = withTimeout((async () => {
         const t0 = Date.now();
         const brokerMeta = await pBrokerMeta;
         const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
         const industryName = brokerMeta.indvInduName || profile.industryName || '';
-        const industry = classifyIndustryDetailed(`${baseCompany.name || ''} ${industryName || profile.industryName || ''}`.trim());
+        const webIndustryHint = await pWebIndustry;
+        const industry = classifyIndustryDetailed(`${baseCompany.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim());
         if (isFinancialReviewIndustryBase && nonListed) {
           const revenue = await pRevenue;
           const top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
@@ -3614,7 +3788,8 @@ const server = http.createServer(async (req, res) => {
         const brokerMeta = await pBrokerMeta;
         const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
         const industryName = brokerMeta.indvInduName || profile.industryName || '';
-        const industry = classifyIndustryDetailed(`${baseCompany.name || ''} ${industryName || profile.industryName || ''}`.trim());
+        const webIndustryHint = await pWebIndustry;
+        const industry = classifyIndustryDetailed(`${baseCompany.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim());
         const brokerPeers = industryCode ? await brokerReportIndustryPeers(industryCode, 2) : [];
         const forceTopDerivedCompetitors =
           Boolean(INDUSTRY_HEAD_SEED_CODES[industry.industryLevel2]) &&
