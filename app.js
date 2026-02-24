@@ -21,6 +21,8 @@ const state = {
   lastSearched: '',
   suggestAbort: null,
   apiReady: Promise.resolve(),
+  apiCandidates: [],
+  apiIndex: 0,
 };
 
 init();
@@ -59,7 +61,11 @@ async function renderSuggestions(q) {
   const ctl = new AbortController();
   state.suggestAbort = ctl;
   try {
-    const res = await fetch(apiUrl(`/api/suggest?q=${encodeURIComponent(q)}`), { signal: ctl.signal });
+    let res = await fetch(apiUrl(`/api/suggest?q=${encodeURIComponent(q)}`), { signal: ctl.signal });
+    // Browser-side tunnel/network policy can fail by domain; rotate backend once.
+    if (!res.ok && switchToNextApiBase()) {
+      res = await fetch(apiUrl(`/api/suggest?q=${encodeURIComponent(q)}`), { signal: ctl.signal });
+    }
     if (!res.ok) throw new Error('suggest failed');
     if (seq !== state.suggestSeq) return;
     const data = await res.json();
@@ -91,11 +97,15 @@ async function renderSuggestions(q) {
     });
   } catch (e) {
     if (e?.name === 'AbortError') return;
+    if (switchToNextApiBase()) {
+      renderSuggestions(q);
+      return;
+    }
     els.suggestions.innerHTML = "<p class='empty'>联网建议接口不可用，请稍后再试。</p>";
   }
 }
 
-async function runSearch(q) {
+async function runSearch(q, retry = 0) {
   await state.apiReady;
   state.lastSearched = q;
   const current = ++state.seq;
@@ -189,6 +199,12 @@ async function runSearch(q) {
   es.addEventListener('error', () => {
     if (current !== state.seq) return;
     if (!company) {
+      if (retry < Math.max(1, state.apiCandidates.length - 1) && switchToNextApiBase()) {
+        es.close();
+        if (state.stream === es) state.stream = null;
+        runSearch(q, retry + 1);
+        return;
+      }
       els.overview.classList.add('hidden');
       els.overview.innerHTML = '';
       resetPanelsOnly('联网接口暂不可用');
@@ -216,6 +232,16 @@ function getApiCandidates() {
   return out;
 }
 
+function switchToNextApiBase() {
+  if (!state.apiCandidates.length) return false;
+  const next = state.apiIndex + 1;
+  if (next >= state.apiCandidates.length) return false;
+  state.apiIndex = next;
+  API_BASE = state.apiCandidates[state.apiIndex];
+  localStorage.setItem('APP_API_BASE', API_BASE);
+  return true;
+}
+
 function timeoutSignal(ms) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
@@ -238,8 +264,12 @@ async function checkApiHealth(base) {
 
 async function ensureApiBase() {
   const candidates = getApiCandidates();
-  for (const base of candidates) {
+  state.apiCandidates = candidates;
+  state.apiIndex = 0;
+  for (let i = 0; i < candidates.length; i += 1) {
+    const base = candidates[i];
     if (await checkApiHealth(base)) {
+      state.apiIndex = i;
       API_BASE = base;
       localStorage.setItem('APP_API_BASE', base);
       return;
