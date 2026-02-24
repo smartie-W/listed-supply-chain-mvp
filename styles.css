@@ -42,7 +42,55 @@ body {
 
 .top-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.net-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #c2ced8;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fff;
+}
+
+.net-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9534f;
+}
+
+.net-online {
+  color: #177245;
+  border-color: #9ad8b9;
+  background: #eefbf3;
+}
+
+.net-online::before {
+  background: #1aa65f;
+}
+
+.net-checking {
+  color: #8a6410;
+  border-color: #e2c987;
+  background: #fff8e6;
+}
+
+.net-checking::before {
+  background: #d29c1d;
+}
+
+.net-offline {
+  color: #9b2e25;
+  border-color: #e2b2ad;
+  background: #fff2f1;
 }
 
 .ghost-btn {

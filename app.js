@@ -6,6 +6,7 @@ const els = {
   top5Body: document.querySelector('#top5Body'),
   supplierBody: document.querySelector('#supplierBody'),
   customerBody: document.querySelector('#customerBody'),
+  networkStatus: document.querySelector('#networkStatus'),
 };
 
 let API_BASE = '';
@@ -31,6 +32,7 @@ const state = {
 init();
 
 function init() {
+  setNetworkStatus('checking');
   state.apiReady = ensureApiBase();
   wireEvents();
   resetAll();
@@ -113,7 +115,9 @@ async function renderSuggestions(q) {
       return;
     }
     state.offlineMode = true;
-    renderLocalSuggestions(q);
+    setNetworkStatus('offline');
+    if (ALLOW_OFFLINE_DEMO) renderLocalSuggestions(q);
+    else els.suggestions.innerHTML = '';
   }
 }
 
@@ -122,8 +126,10 @@ async function runSearch(q, retry = 0) {
   if (state.offlineMode || !API_BASE) {
     if (ALLOW_OFFLINE_DEMO) runLocalSearch(q);
     else renderOfflineUnavailable(q);
+    setNetworkStatus('offline');
     return;
   }
+  setNetworkStatus('querying');
   state.lastSearched = q;
   const current = ++state.seq;
   if (state.stream) {
@@ -211,6 +217,7 @@ async function runSearch(q, retry = 0) {
     stopEtaTimer();
     es.close();
     if (state.stream === es) state.stream = null;
+    setNetworkStatus('online');
   });
 
   es.addEventListener('error', () => {
@@ -225,6 +232,7 @@ async function runSearch(q, retry = 0) {
       els.overview.classList.add('hidden');
       els.overview.innerHTML = '';
       resetPanelsOnly('联网接口暂不可用');
+      setNetworkStatus('offline');
     }
     stopEtaTimer();
     es.close();
@@ -287,6 +295,7 @@ async function ensureApiBase() {
   if (!candidates.length) {
     API_BASE = '';
     state.offlineMode = true;
+    setNetworkStatus('offline');
     return;
   }
   const checks = await Promise.all(candidates.map((base) => checkApiHealth(base)));
@@ -296,10 +305,12 @@ async function ensureApiBase() {
     API_BASE = candidates[firstOk];
     state.offlineMode = false;
     localStorage.setItem('APP_API_BASE', API_BASE);
+    setNetworkStatus('online');
     return;
   }
   API_BASE = '';
   state.offlineMode = true;
+  setNetworkStatus('offline');
   if (window.location.hostname.endsWith('github.io')) {
     els.suggestions.innerHTML = "<p class='hint'>当前未连接后端，暂不可联网查询。请使用参数：<code>?api=https://你的后端域名</code></p>";
   }
@@ -730,4 +741,21 @@ function renderOfflineUnavailable(q) {
   els.top5Body.innerHTML = "<p class='empty'>未连接后端，无法查询行业 Top5</p>";
   els.supplierBody.innerHTML = "<p class='empty'>未连接后端，无法查询供应商</p>";
   els.customerBody.innerHTML = "<p class='empty'>未连接后端，无法查询客户</p>";
+}
+
+function setNetworkStatus(mode) {
+  if (!els.networkStatus) return;
+  els.networkStatus.classList.remove('net-online', 'net-offline', 'net-checking');
+  if (mode === 'online') {
+    els.networkStatus.classList.add('net-online');
+    els.networkStatus.textContent = '已联网';
+    return;
+  }
+  if (mode === 'querying' || mode === 'checking') {
+    els.networkStatus.classList.add('net-checking');
+    els.networkStatus.textContent = '联网中';
+    return;
+  }
+  els.networkStatus.classList.add('net-offline');
+  els.networkStatus.textContent = '未联网';
 }
