@@ -1,6 +1,6 @@
 // Public backend candidates.
 // Keep empty by default to avoid stale tunnel domains; use ?api=... to inject.
-window.APP_API_BASES = ['https://121-196-230-57.sslip.io'];
+window.APP_API_BASES = ['https://orbit-printers-yields-agent.trycloudflare.com'];
 
 // Safety switch:
 // false = never show offline demo relations/revenue (avoid fake-looking data in production pages).
