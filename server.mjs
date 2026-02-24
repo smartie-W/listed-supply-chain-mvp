@@ -250,7 +250,7 @@ function manualSuggestRows(query = '') {
       aliases: x.aliases,
     }));
 }
-const FINANCIAL_REVIEW_INDUSTRIES = new Set(['银行业', '证券业', '基金管理', '期货业', '交易所与清算基础设施', '金融科技']);
+const FINANCIAL_REVIEW_INDUSTRIES = new Set(['银行业', '证券业', '保险', '基金管理', '期货业', '交易所与清算基础设施', '金融科技']);
 const FINANCIAL_PEER_LIBRARY = {
   银行业: [
     { name: '招商银行', code: '600036' },
@@ -265,6 +265,13 @@ const FINANCIAL_PEER_LIBRARY = {
     { name: '国泰海通', code: '601211' },
     { name: '中国银河', code: '601881' },
     { name: '中金公司', code: '601995' },
+  ],
+  保险: [
+    { name: '中国平安', code: '601318' },
+    { name: '中国人寿', code: '601628' },
+    { name: '中国太保', code: '601601' },
+    { name: '新华保险', code: '601336' },
+    { name: '中国人保', code: '601319' },
   ],
   基金管理: [
     { name: '易方达基金管理有限公司' },
@@ -295,6 +302,27 @@ const FINANCIAL_PEER_LIBRARY = {
     { name: '拉卡拉', code: '300773' },
   ],
 };
+
+async function fillDisplayNamesByCode(rows = []) {
+  const list = Array.isArray(rows) ? rows : [];
+  const miss = list.filter((x) => !String(x?.name || '').trim() && /^\d{6}$/.test(String(x?.code || '')));
+  if (!miss.length) {
+    return list.map((x) => ({ ...x, name: String(x?.name || '').trim() || (x?.code ? String(x.code) : '-') }));
+  }
+  const nameByCode = new Map();
+  await Promise.all(miss.map(async (x) => {
+    const code = String(x.code || '').trim();
+    if (!/^\d{6}$/.test(code)) return;
+    const p = await withTimeout(stockProfile(mapSecId(code)), 1800, null);
+    const name = String(p?.name || '').trim();
+    if (name) nameByCode.set(code, name);
+  }));
+  return list.map((x) => {
+    const code = String(x?.code || '').trim();
+    const name = String(x?.name || '').trim() || nameByCode.get(code) || (code || '-');
+    return { ...x, name };
+  });
+}
 const FINANCIAL_LINKAGE_LIBRARY = {
   银行业: {
     upstream: ['中国银联股份有限公司', '中国人民银行清算总中心', '腾讯云计算（北京）有限责任公司'],
@@ -3496,7 +3524,8 @@ const server = http.createServer(async (req, res) => {
               industryName,
               industryCode,
             }), 6500, []);
-      top5 = top5Raw.map((x) => ({
+      const top5Named = await fillDisplayNamesByCode(top5Raw);
+      top5 = top5Named.map((x) => ({
         ...x,
         sourceTier: 'tier1',
         sourceType: 'financial_statement',
@@ -3510,7 +3539,7 @@ const server = http.createServer(async (req, res) => {
           .filter((x) => String(x.code) !== String(code))
           .slice(0, 10)
           .map((x) =>
-            evidenceRow(x.name, {
+            evidenceRow(x.name || x.code || '-', {
               code: x.code,
               reason: `同属 ${industry.industryName || profile.industryName || '相关'} 领域（行业Top候选）`,
               confidence: 0.68,
@@ -3763,7 +3792,8 @@ const server = http.createServer(async (req, res) => {
                 industryName,
                 industryCode,
               });
-        let top5 = top5Raw.map((x) => ({
+        const top5Named = await fillDisplayNamesByCode(top5Raw);
+        let top5 = top5Named.map((x) => ({
           ...x,
           sourceTier: 'tier1',
           sourceType: 'financial_statement',
