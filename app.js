@@ -424,19 +424,34 @@ function renderTop5(rows, company) {
 }
 
 function renderSuppliers(rows) {
-  if (!rows.length) {
+  const entityRows = keepEntityRelationRows(rows);
+  if (!entityRows.length) {
     els.supplierBody.innerHTML = "<p class='empty'>暂无证据链供应商数据</p>";
     return;
   }
-  els.supplierBody.innerHTML = renderTieredRelationRows(rows, '上游供货候选');
+  els.supplierBody.innerHTML = renderTieredRelationRows(entityRows, '上游供货候选');
 }
 
 function renderCustomers(rows) {
-  if (!rows.length) {
+  const entityRows = keepEntityRelationRows(rows);
+  if (!entityRows.length) {
     els.customerBody.innerHTML = "<p class='empty'>暂无证据链客户数据</p>";
     return;
   }
-  els.customerBody.innerHTML = renderTieredRelationRows(rows, '下游采购方候选');
+  els.customerBody.innerHTML = renderTieredRelationRows(entityRows, '下游采购方候选');
+}
+
+function keepEntityRelationRows(rows = []) {
+  const src = Array.isArray(rows) ? rows : [];
+  const entityRe = /(有限责任公司|股份有限公司|集团有限公司|集团股份有限公司|有限公司|公司|集团|银行|证券|基金|交易所|研究院|中心|协会|医院|学校|大学|事务所|控股)/;
+  const badWordRe = /(综合行业|综合|行业|上游|下游|链路|材料|制造|能源|电子元件|半导体|工业软件|软件开发|信息技术)$/;
+  return src.filter((x) => {
+    const n = String(x?.name || '').trim();
+    if (!n) return false;
+    if (entityRe.test(n)) return true;
+    if (badWordRe.test(n)) return false;
+    return n.length >= 4 && n.length <= 24;
+  });
 }
 
 function renderTieredRelationRows(rows, fallbackReason) {
