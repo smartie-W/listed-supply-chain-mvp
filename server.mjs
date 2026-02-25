@@ -182,6 +182,7 @@ const INDUSTRY_HEAD_SEED_CODES = {
   '半导体芯片': ['603501', '688008', '600745', '300661', '688041'],
   '汽车供应链': ['002920', '601689', '600699', '601799', '603596'],
   '化学纤维': ['002064', '603225', '000420', '000949', '600810', '002254'],
+  家居建材: ['001322', '003012', '002918', '603833', '603816'],
   仪器仪表: ['300007', '300165', '688056', '300112', '300114'],
 };
 const SOURCE_TIER_RANK = { tier1: 3, tier2: 2, tier3: 1 };
@@ -192,6 +193,8 @@ const INDUSTRY_TAXONOMY = [
   { l1: '工业', l2: '智能制造', re: /(智能制造|装备制造|工业机器人|高端装备|数字化工厂|工业自动化)/, upstream: ['伺服驱动', '传感器', '工控芯片'], downstream: ['制造业', '汽车', '能源'] },
   { l1: '汽车', l2: '汽车供应链', re: /(汽车供应链|汽车零部件|汽车电子|智能座舱|热管理|底盘|线束|车规)/, upstream: ['芯片', '传感器', '材料'], downstream: ['整车厂', '一级供应商'] },
   { l1: '工业', l2: '仪器仪表', re: /(科学仪器|分析仪器|检测仪器|测试仪器|实验室设备|液相色谱|气相色谱|质谱|光谱|色谱仪|质谱仪|仪器仪表)/, upstream: ['电子元件', '传感器', '精密加工件'], downstream: ['高校科研', '生物医药', '化工材料', '第三方检测'] },
+  { l1: '服务业', l2: '工程技术研发服务', re: /(工程和技术研究和试验发展|工程技术研究|技术研发服务|研发设计服务|研究与试验发展)/, upstream: ['研发设备', 'EDA工具', '高性能算力'], downstream: ['半导体芯片', '工业制造', '科研院所'] },
+  { l1: '服务业', l2: '广播电视与新媒体', re: /(新媒体|融媒体|传媒|广电|广播电视|电视台|节目制作|内容运营|媒体传播)/, upstream: ['内容制作', '采编系统', '云与CDN平台'], downstream: ['广告主', '政企客户', '内容平台用户'] },
   { l1: '金融', l2: '证券与期货', re: /(证券|期货|券商|资管|投行)/, upstream: ['信息技术', '交易系统', '风控系统'], downstream: ['机构客户', '个人投资者', '上市公司'] },
   { l1: '金融', l2: '银行', re: /(银行|农商行|城商行)/, upstream: ['金融IT', '支付清算', '风控系统'], downstream: ['企业客户', '个人客户'] },
   { l1: '金融', l2: '保险', re: /(保险|寿险|财险)/, upstream: ['精算系统', '渠道服务', '数据服务'], downstream: ['企业客户', '个人客户'] },
@@ -202,6 +205,7 @@ const INDUSTRY_TAXONOMY = [
   { l1: '汽车', l2: '智能网联', re: /(智能驾驶|车联网|座舱|汽车电子|自动驾驶)/, upstream: ['芯片', '传感器', '操作系统'], downstream: ['整车厂', '出行平台'] },
   { l1: '医疗健康', l2: '医疗器械与服务', re: /(医疗|医药|器械|生物科技|医院)/, upstream: ['原料药', '电子元件', '耗材'], downstream: ['医院', '患者'] },
   { l1: '材料', l2: '化学纤维', re: /(化学纤维|涤纶|锦纶|氨纶|腈纶|粘胶|纤维)/, upstream: ['石化原料', '助剂', '纺丝设备'], downstream: ['纺织服装', '汽车内饰', '工业材料'] },
+  { l1: '工业', l2: '家居建材', re: /(厨卫|卫浴|洁具|龙头|花洒|马桶|浴室柜|家居建材|建材|陶瓷卫浴|五金卫浴)/, upstream: ['铜材与不锈钢', '陶瓷与釉料', '阀芯与密封件'], downstream: ['地产精装', '家装公司', '经销渠道', '电商平台'] },
 ];
 const COMPANY_INDUSTRY_OVERRIDES = [
   { names: ['华大九天', '北京华大九天科技股份有限公司'], l1: '电子信息', l2: '半导体EDA' },
@@ -224,6 +228,24 @@ const COMPANY_INDUSTRY_OVERRIDES = [
     l1: '服务业',
     l2: '金融科技',
   },
+  {
+    names: ['九牧厨卫股份有限公司', '九牧厨卫', '九牧'],
+    l1: '工业',
+    l2: '家居建材',
+  },
+  {
+    names: ['苏州异格技术有限公司', '异格技术', 'EAGLECHIP'],
+    l1: '电子信息',
+    l2: '半导体芯片',
+  },
+  {
+    names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'],
+    l1: '服务业',
+    l2: '广播电视与新媒体',
+  },
+];
+const COMPANY_WEBSITE_OVERRIDES = [
+  { names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'], website: 'https://www.cjltv.com' },
 ];
 const COMPANY_CODE_ALIASES = {
   '603501': ['韦尔股份', '豪威集团', '豪威集成电路'],
@@ -401,6 +423,13 @@ const INDUSTRY_TOP5_CURATED = {
     { name: '澜起科技', code: '688008' },
     { name: '长电科技', code: '600584' },
   ],
+  家居建材: [
+    { name: '箭牌家居', code: '001322' },
+    { name: '东鹏控股', code: '003012' },
+    { name: '蒙娜丽莎', code: '002918' },
+    { name: '欧派家居', code: '603833' },
+    { name: '顾家家居', code: '603816' },
+  ],
 };
 const FINANCIAL_LINKAGE_LIBRARY = {
   银行业: {
@@ -437,6 +466,28 @@ const INDUSTRY_PEER_FALLBACK_LIBRARY = {
   '企业软件/SaaS': ['用友网络科技股份有限公司', '金山办公', '广联达科技股份有限公司', '浪潮软件股份有限公司', '鼎捷数智股份有限公司'],
   '半导体与芯片': ['中芯国际集成电路制造有限公司', '北方华创科技集团股份有限公司', '闻泰科技股份有限公司', '韦尔股份', '长电科技'],
   半导体设备: ['北方华创科技集团股份有限公司', '中微公司', '盛美上海', '华海清科', '芯源微'],
+  家居建材: [
+    '箭牌家居集团股份有限公司',
+    '广东东鹏控股股份有限公司',
+    '蒙娜丽莎集团股份有限公司',
+    '惠达卫浴股份有限公司',
+    '厦门松霖科技股份有限公司',
+    '海鸥住工股份有限公司',
+    '瑞尔特股份有限公司',
+    '帝欧家居集团股份有限公司',
+    '欧派家居集团股份有限公司',
+    '索菲亚家居股份有限公司',
+    '志邦家居股份有限公司',
+    '金牌厨柜家居科技股份有限公司',
+    '我乐家居股份有限公司',
+    '皮阿诺科学艺术家居股份有限公司',
+    '尚品宅配家居股份有限公司',
+    '好莱客创意家居股份有限公司',
+    '慕思健康睡眠股份有限公司',
+    '喜临门家具股份有限公司',
+    '梦百合家居科技股份有限公司',
+    '麒盛科技股份有限公司',
+  ],
 };
 const SEMICON_LINKAGE_LIBRARY = {
   upstream: [
@@ -454,6 +505,12 @@ const SEMICON_LINKAGE_LIBRARY = {
     '宁德时代新能源科技股份有限公司',
   ],
 };
+
+function peerFallbackLimitByIndustry(industryL2 = '') {
+  const t = String(industryL2 || '').trim();
+  if (t === '家居建材') return 20;
+  return 10;
+}
 
 function buildIndustryPeerFallback(industryL2 = '', selfName = '', limit = 10) {
   const rows = Array.isArray(INDUSTRY_PEER_FALLBACK_LIBRARY[String(industryL2 || '').trim()])
@@ -627,7 +684,8 @@ function classifyIndustryByCompanyNameOnly(name = '') {
   if (/(通信|电信|联通|移动|铁塔)/.test(n)) return { l1: '服务业', l2: '电信运营' };
   if (/(华为|中兴通讯|联发科技|立讯精密|京东方|TCL)/.test(n)) return { l1: '工业', l2: '电子元件制造' };
   if (/(电子|半导体|芯片|集成电路|华创|存储|晶圆)/.test(n)) return { l1: '工业', l2: '半导体制造' };
-  if (/(软件|信息技术|科技|云|数码|网络|智联|智策)/.test(n)) return { l1: '服务业', l2: '软件开发' };
+  if (/(厨卫|卫浴|洁具|龙头|花洒|马桶|浴室柜|陶瓷卫浴|五金卫浴|家居建材)/.test(n)) return { l1: '工业', l2: '家居建材' };
+  if (/(软件|信息技术|云计算|大数据|人工智能|网络服务|系统集成|SaaS)/.test(n)) return { l1: '服务业', l2: '软件开发' };
   if (/(阿里巴巴|腾讯|百度|网易|快手|拼多多|京东|美团|贝壳|携程|唯品会)/.test(n)) return { l1: '服务业', l2: '互联网服务' };
   if (/(医药|生物|医院|医疗)/.test(n)) return { l1: '工业', l2: '医药制造' };
   if (/(快递|物流|供应链|航运|海运|港务|铁路)/.test(n)) return { l1: '服务业', l2: '物流仓储' };
@@ -968,6 +1026,7 @@ function inferIndustryByCompanyName(name = '') {
   const s = String(name || '').replace(/\s+/g, '');
   if (!s) return null;
   const rules = [
+    { re: /(新媒体|融媒体|传媒|广电|广播电视|电视台|栏目|节目)/, l1: '服务业', l2: '广播电视与新媒体' },
     { re: /(证券|期货|基金|资管|投顾)/, l1: '金融', l2: '证券与期货' },
     { re: /(银行|农商行|城商行)/, l1: '金融', l2: '银行' },
     { re: /(保险|寿险|财险)/, l1: '金融', l2: '保险' },
@@ -975,11 +1034,12 @@ function inferIndustryByCompanyName(name = '') {
     { re: /(电子|通信|消费电子)/, l1: '电子信息', l2: '消费电子' },
     { re: /(网络安全|信息安全|安全技术|安全服务|等保)/, l1: '信息技术', l2: 'IT服务' },
     { re: /(系统集成|信息系统|运维|技术服务|解决方案|咨询服务|集成服务)/, l1: '信息技术', l2: 'IT服务' },
-    { re: /(软件|信息技术|数字|网络|云|数据|人工智能|科技|计算机|平台)/, l1: '信息技术', l2: '软件开发' },
+    { re: /(软件|信息技术|数字化|网络服务|云计算|大数据|人工智能|计算机|SaaS|平台系统)/, l1: '信息技术', l2: '软件开发' },
     { re: /(自动化|机器人|装备|机械|智造|工业控制)/, l1: '工业', l2: '智能制造' },
     { re: /(汽车|车载|智驾|座舱|零部件)/, l1: '汽车', l2: '汽车供应链' },
     { re: /(电网|输配电|电气|电力|能源)/, l1: '能源电力', l2: '电网设备' },
-    { re: /(医疗|医药|生物|器械|医院)/, l1: '医疗健康', l2: '医疗器械与服务' },
+    { re: /(医疗|医药|生物|器械|医院|健康)/, l1: '医疗健康', l2: '医疗器械与服务' },
+    { re: /(厨卫|卫浴|洁具|龙头|花洒|马桶|浴室柜|陶瓷卫浴|五金卫浴|家居建材)/, l1: '工业', l2: '家居建材' },
     { re: /(化工|化学|材料|纤维)/, l1: '材料', l2: '化学纤维' },
   ];
   const hit = rules.find((x) => x.re.test(s));
@@ -992,6 +1052,19 @@ function inferIndustryByCompanyName(name = '') {
     upstream: item?.upstream || ['原材料', '设备', '技术服务'],
     downstream: item?.downstream || ['企业客户', '渠道客户'],
   };
+}
+
+function websiteOverrideByName(name = '') {
+  const n = normalizeName(name);
+  if (!n) return '';
+  for (const row of COMPANY_WEBSITE_OVERRIDES) {
+    const hit = (row.names || []).some((x) => {
+      const k = normalizeName(x);
+      return k && (n.includes(k) || k.includes(n));
+    });
+    if (hit) return String(row.website || '').trim();
+  }
+  return '';
 }
 
 function classifyIndustryDetailed(input = '') {
@@ -1698,6 +1771,19 @@ async function fetchSiteText(url) {
   }
 }
 
+function inferIndustryByBusinessEvidence(text = '') {
+  const t = String(text || '').slice(0, 60000);
+  if (!t) return '';
+  // Prefer business-domain signals over legal name suffixes.
+  if (/(FPGA|可编程芯片|芯片研发|芯片设计|集成电路|半导体|SoC|EDA)/i.test(t)) return '半导体芯片';
+  if (/(工程和技术研究和试验发展|工程技术研究|技术研发服务|研发设计服务|研究与试验发展)/.test(t)) return '工程技术研发服务';
+  if (/(科学仪器|色谱仪|质谱仪|检测仪器|实验室设备)/.test(t)) return '仪器仪表';
+  if (/(厨卫|卫浴|洁具|龙头|花洒|马桶|浴室柜|陶瓷卫浴|五金卫浴)/.test(t)) return '家居建材';
+  if (/(银行|证券|期货|基金|保险)/.test(t)) return '';
+  if (/(软件|SaaS|云平台|系统集成|数据中台|中间件)/i.test(t)) return '软件开发';
+  return '';
+}
+
 function splitUsefulLines(text) {
   return String(text || '')
     .split('\n')
@@ -2367,6 +2453,14 @@ function buildFinancialLinkageRows(industryL2 = '', type = 'downstream', selfNam
     );
 }
 
+function allowNonListedIndustryFallback(industry = {}) {
+  const l2 = String(industry?.industryLevel2 || '').trim();
+  if (!l2 || l2 === '综合行业') return false;
+  // Accuracy-first strategy:
+  // only allow very specific curated industries for non-listed fallback.
+  return ['家居建材', '半导体芯片', '半导体EDA', '半导体制造'].includes(l2);
+}
+
 function buildFinancialPeerFallback(industryL2 = '', selfName = '', limit = 10) {
   const peers = Array.isArray(FINANCIAL_PEER_LIBRARY[String(industryL2 || '').trim()])
     ? FINANCIAL_PEER_LIBRARY[String(industryL2 || '').trim()]
@@ -2484,11 +2578,16 @@ async function inferIndustryByWeb(name) {
   if (!q) return '';
   const direct = classifyIndustryDetailed(q);
   if (direct.industryLevel1 !== '综合') return direct.industryName;
+  const webBrief = await withTimeout(fetchMirrorSearchText(`${q} 公司简介 主营业务 产品 服务`), 7000, '');
+  const evidenceL2 = inferIndustryByBusinessEvidence(`${q}\n${webBrief}`);
+  if (evidenceL2) return evidenceL2;
   if (/(计算机|软件|信息技术|信息服务|云计算|大数据|人工智能|网络安全)/.test(q)) return '软件开发';
   const site = await discoverOfficialWebsite(q);
   if (site) {
     const siteText = await withTimeout(fetchSiteText(site), 6500, '');
     if (siteText) {
+      const evidenceFromSite = inferIndustryByBusinessEvidence(`${q}\n${siteText}`);
+      if (evidenceFromSite) return evidenceFromSite;
       const clsFromSite = classifyIndustryDetailed(`${q} ${String(siteText).slice(0, 15000)}`);
       if (clsFromSite.industryLevel1 !== '综合') return clsFromSite.industryName;
     }
@@ -3023,6 +3122,12 @@ function normalizeAnnualRelationRows(rows = [], defaultReason = '年报披露') 
   );
 }
 
+function sanitizeRelationRows(rows = [], selfName = '', limit = 20) {
+  return mergeEvidenceRows(Array.isArray(rows) ? rows : [])
+    .filter((x) => isValidRelationEntityName(x?.name || '', selfName))
+    .slice(0, limit);
+}
+
 function json(res, obj, status = 200) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -3071,12 +3176,13 @@ async function resolveCompanyContext(q) {
   if (cachedCtx) return cachedCtx;
   const quickNonListedProfile = (name) => {
     const industry = classifyIndustryDetailed(String(name || '').trim());
+    const website = websiteOverrideByName(name);
     return {
       code: '',
       name,
       industryName: industry.industryName || '',
       industryCode: '',
-      website: '',
+      website: website || '',
       totalMarketValue: 0,
       circulatingMarketValue: 0,
       peTtm: 0,
@@ -3093,7 +3199,7 @@ async function resolveCompanyContext(q) {
         name: c500.name || query,
         industryName: c500.l2 || '综合行业',
         industryCode: '',
-        website: '',
+        website: websiteOverrideByName(c500.name || query) || '',
         totalMarketValue: 0,
         circulatingMarketValue: 0,
         peTtm: 0,
@@ -3118,7 +3224,7 @@ async function resolveCompanyContext(q) {
         name: query,
         industryName: quickOv.l2,
         industryCode: '',
-        website: '',
+        website: websiteOverrideByName(query) || '',
         totalMarketValue: 0,
         circulatingMarketValue: 0,
         peTtm: 0,
@@ -3266,6 +3372,9 @@ async function resolveCompanyContext(q) {
     peTtm: 0,
     pb: 0,
   };
+  if (!profile.website) {
+    profile.website = websiteOverrideByName(profile.name || candidate.name || query) || '';
+  }
   const out = { candidate, secid, profile, nonListed: false };
   cacheSet(ctxCacheKey, out, 10 * 60 * 1000);
   return out;
@@ -3614,7 +3723,7 @@ const server = http.createServer(async (req, res) => {
     ]);
     const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
     const industryName = brokerMeta.indvInduName || profile.industryName || '';
-    const website = profile.website || discoveredSite || '';
+    const website = websiteOverrideByName(profile.name || candidate.name || q) || profile.website || discoveredSite || '';
     const industry = classifyIndustryDetailed(
       `${profile.name || candidate.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim(),
     );
@@ -3641,12 +3750,12 @@ const server = http.createServer(async (req, res) => {
       }));
 
     let top5 = [];
-    if (isFinancialReviewIndustry && nonListed) {
+    if (isFinancialReviewIndustry && nonListed && allowNonListedIndustryFallback(industry)) {
       top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
     } else {
       const preferFineGrainedTop = !nonListed && industry.industryLevel2 && industry.industryLevel2 !== (industryName || '');
       const top5Raw =
-        nonListed || preferFineGrainedTop
+        (nonListed && allowNonListedIndustryFallback(industry)) || preferFineGrainedTop
           ? await withTimeout(top5ByIndustryNameFallback(industry.industryName || industryName, 5), 6500, [])
           : await withTimeout(top5ByIndustry({
               code,
@@ -3695,11 +3804,19 @@ const server = http.createServer(async (req, res) => {
       competitorsFinal = [...competitorsFinal, ...append].slice(0, 20);
     }
     competitorsFinal = filterByEvidenceTier(competitorsFinal).slice(0, 20);
-    if (!competitorsFinal.length) {
-      competitorsFinal = buildChina500PeerFallback(profile.name || candidate.name, industry.industryLevel2, 10);
+    if (!competitorsFinal.length && (!nonListed || allowNonListedIndustryFallback(industry))) {
+      competitorsFinal = buildChina500PeerFallback(
+        profile.name || candidate.name,
+        industry.industryLevel2,
+        peerFallbackLimitByIndustry(industry.industryLevel2),
+      );
     }
-    if (!competitorsFinal.length) {
-      competitorsFinal = buildIndustryPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
+    if (!competitorsFinal.length && (!nonListed || allowNonListedIndustryFallback(industry))) {
+      competitorsFinal = buildIndustryPeerFallback(
+        industry.industryLevel2,
+        profile.name || candidate.name,
+        peerFallbackLimitByIndustry(industry.industryLevel2),
+      );
     }
 
     let customers = [];
@@ -3728,7 +3845,7 @@ const server = http.createServer(async (req, res) => {
       suppliers = suppliers.length ? suppliers : suppliersFetched;
     }
 
-    if (isFinancialReviewIndustry) {
+    if (isFinancialReviewIndustry && !nonListed) {
       if (!top5.length) top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
       if (!competitorsFinal.length) competitorsFinal = buildFinancialPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
       suppliers = suppliers.length ? suppliers : buildFinancialLinkageRows(industry.industryLevel2, 'upstream', profile.name || candidate.name, 8);
@@ -3740,10 +3857,12 @@ const server = http.createServer(async (req, res) => {
     }
     // Suppliers/customers must be entity evidence, never generic industry words.
     // Keep empty if no verifiable chain is found.
-    if (!top5.length) {
+    if (!top5.length && (!nonListed || allowNonListedIndustryFallback(industry))) {
       top5 = await withTimeout(top5ByIndustryNameFallback(industry.industryName || industryName, 5), 5000, []);
     }
     top5 = sanitizeTop5Rows(await fillDisplayNamesByCode(top5), 5);
+    suppliers = sanitizeRelationRows(suppliers, profile.name || candidate.name, 20);
+    customers = sanitizeRelationRows(customers, profile.name || candidate.name, 20);
 
     return json(res, {
       company: {
@@ -3802,6 +3921,7 @@ const server = http.createServer(async (req, res) => {
       const code = profile.code || candidate.code || '';
       const baseIndustry = classifyIndustryDetailed(`${profile.name || candidate.name || ''} ${profile.industryName || ''}`.trim());
       const isFinancialReviewIndustryBase = FINANCIAL_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2);
+      const allowNonListedBaseFallback = allowNonListedIndustryFallback(baseIndustry);
       const isChina500Fast = Boolean(findChina500ByName(profile.name || candidate.name || q));
       const baseCompany = {
         code,
@@ -3812,7 +3932,7 @@ const server = http.createServer(async (req, res) => {
         industryLevel1: baseIndustry.industryLevel1,
         industryLevel2: baseIndustry.industryLevel2,
         industryCode: profile.industryCode || '',
-        website: profile.website || '',
+        website: websiteOverrideByName(profile.name || candidate.name || q) || profile.website || '',
         revenue: null,
         fiscalYear: null,
         revenueSource: '',
@@ -3841,9 +3961,9 @@ const server = http.createServer(async (req, res) => {
       const pFinancing = nonListed
         ? withTimeout(fetchNonListedFinancing(baseCompany.name, 6), 4000, { roundsCount: null, events: [], source: '' })
         : Promise.resolve({ roundsCount: null, events: [], source: '' });
-      const pWebsite = nonListed && !profile.website
+      const pWebsite = nonListed && !(profile.website || websiteOverrideByName(baseCompany.name))
         ? withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '')
-        : Promise.resolve(profile.website || '');
+        : Promise.resolve(websiteOverrideByName(baseCompany.name) || profile.website || '');
       const pWebIndustry = nonListed
         ? withTimeout(inferIndustryByWeb(baseCompany.name), 8000, '')
         : Promise.resolve('');
@@ -3903,7 +4023,7 @@ const server = http.createServer(async (req, res) => {
         const industryName = brokerMeta.indvInduName || profile.industryName || '';
         const webIndustryHint = await pWebIndustry;
         const industry = classifyIndustryDetailed(`${baseCompany.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim());
-        if (isFinancialReviewIndustryBase && nonListed) {
+        if (isFinancialReviewIndustryBase && nonListed && allowNonListedBaseFallback) {
           const revenue = await pRevenue;
           const top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
           recordPerf('top5', Date.now() - t0);
@@ -3911,7 +4031,7 @@ const server = http.createServer(async (req, res) => {
         }
         const preferFineGrainedTop = !nonListed && industry.industryLevel2 && industry.industryLevel2 !== (industryName || '');
         const top5Raw =
-          nonListed || preferFineGrainedTop
+          (nonListed && allowNonListedBaseFallback) || preferFineGrainedTop
             ? await top5ByIndustryNameFallback(industry.industryName || industryName, 5)
             : await top5ByIndustry({
                 code,
@@ -3927,11 +4047,11 @@ const server = http.createServer(async (req, res) => {
           sourceType: 'financial_statement',
           confidence: Number.isFinite(x.revenue) && x.revenue > 0 ? 0.92 : 0.65,
         }));
-        if (!top5.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2)) {
+        if (!top5.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
           const revenue = await pRevenue;
           top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
         }
-        if (!top5.length) {
+        if (!top5.length && (!nonListed || allowNonListedBaseFallback)) {
           top5 = await top5ByIndustryNameFallback(industry.industryName || industryName, 5);
         }
         recordPerf('top5', Date.now() - t0);
@@ -3999,14 +4119,22 @@ const server = http.createServer(async (req, res) => {
           competitors = [...competitors, ...append].slice(0, 20);
         }
         competitors = filterByEvidenceTier(competitors).slice(0, 20);
-        if (!competitors.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2)) {
+        if (!competitors.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
           competitors = buildFinancialPeerFallback(industry.industryLevel2, baseCompany.name, 10);
         }
-        if (!competitors.length) {
-          competitors = buildChina500PeerFallback(baseCompany.name, industry.industryLevel2, 10);
+        if (!competitors.length && (!nonListed || allowNonListedBaseFallback)) {
+          competitors = buildChina500PeerFallback(
+            baseCompany.name,
+            industry.industryLevel2,
+            peerFallbackLimitByIndustry(industry.industryLevel2),
+          );
         }
-        if (!competitors.length) {
-          competitors = buildIndustryPeerFallback(industry.industryLevel2, baseCompany.name, 10);
+        if (!competitors.length && (!nonListed || allowNonListedBaseFallback)) {
+          competitors = buildIndustryPeerFallback(
+            industry.industryLevel2,
+            baseCompany.name,
+            peerFallbackLimitByIndustry(industry.industryLevel2),
+          );
         }
         recordPerf('competitors', Date.now() - t0);
         return competitors;
@@ -4019,7 +4147,7 @@ const server = http.createServer(async (req, res) => {
           recordPerf('customers', Date.now() - t0);
           return normalizeAnnualRelationRows(annual.customers, '年报披露前五客户');
         }
-        if (isFinancialReviewIndustryBase) {
+        if (isFinancialReviewIndustryBase && !nonListed) {
           const linked = buildFinancialLinkageRows(baseIndustry.industryLevel2, 'downstream', baseCompany.name, 8);
           recordPerf('customers', Date.now() - t0);
           return linked;
@@ -4045,7 +4173,7 @@ const server = http.createServer(async (req, res) => {
           recordPerf('suppliers', Date.now() - t0);
           return normalizeAnnualRelationRows(annual.suppliers, '年报披露前五供应商');
         }
-        if (isFinancialReviewIndustryBase) {
+        if (isFinancialReviewIndustryBase && !nonListed) {
           const linked = buildFinancialLinkageRows(baseIndustry.industryLevel2, 'upstream', baseCompany.name, 8);
           recordPerf('suppliers', Date.now() - t0);
           return linked;
@@ -4071,10 +4199,10 @@ const server = http.createServer(async (req, res) => {
         .then((rows) => sseWrite(res, 'competitors', { rows }))
         .catch(() => sseWrite(res, 'competitors', { rows: [] }));
       customersTask
-        .then((rows) => sseWrite(res, 'customers', { rows }))
+        .then((rows) => sseWrite(res, 'customers', { rows: sanitizeRelationRows(rows, baseCompany.name, 20) }))
         .catch(() => sseWrite(res, 'customers', { rows: [] }));
       suppliersTask
-        .then((rows) => sseWrite(res, 'suppliers', { rows }))
+        .then((rows) => sseWrite(res, 'suppliers', { rows: sanitizeRelationRows(rows, baseCompany.name, 20) }))
         .catch(() => sseWrite(res, 'suppliers', { rows: [] }));
 
       await Promise.allSettled([top5Task, competitorsTask, customersTask, suppliersTask, pRevenue, pFinancing]);
