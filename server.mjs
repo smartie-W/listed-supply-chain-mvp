@@ -305,24 +305,76 @@ const FINANCIAL_PEER_LIBRARY = {
 
 async function fillDisplayNamesByCode(rows = []) {
   const list = Array.isArray(rows) ? rows : [];
-  const miss = list.filter((x) => !String(x?.name || '').trim() && /^\d{6}$/.test(String(x?.code || '')));
+  const missingName = (x) => {
+    const name = String(x?.name || '').trim();
+    const code = String(x?.code || '').trim();
+    if (!name) return true;
+    if (/^\d{6}$/.test(name)) return true;
+    if (name === code) return true;
+    return false;
+  };
+  const miss = list.filter((x) => missingName(x) && /^\d{6}$/.test(String(x?.code || '')));
   if (!miss.length) {
-    return list.map((x) => ({ ...x, name: String(x?.name || '').trim() || (x?.code ? String(x.code) : '-') }));
+    return list.map((x) => {
+      const code = String(x?.code || '').trim();
+      const rawName = String(x?.name || '').trim();
+      const name = !missingName(x) ? rawName : (KNOWN_CODE_NAME_MAP.get(code) || code || '-');
+      return { ...x, name };
+    });
   }
   const nameByCode = new Map();
+  for (const x of miss) {
+    const code = String(x?.code || '').trim();
+    const known = KNOWN_CODE_NAME_MAP.get(code);
+    if (known) nameByCode.set(code, known);
+  }
   await Promise.all(miss.map(async (x) => {
     const code = String(x.code || '').trim();
-    if (!/^\d{6}$/.test(code)) return;
+    if (!/^\d{6}$/.test(code) || nameByCode.has(code)) return;
     const p = await withTimeout(stockProfile(mapSecId(code)), 1800, null);
     const name = String(p?.name || '').trim();
-    if (name) nameByCode.set(code, name);
+    if (name && !/^\d{6}$/.test(name)) nameByCode.set(code, name);
   }));
   return list.map((x) => {
     const code = String(x?.code || '').trim();
-    const name = String(x?.name || '').trim() || nameByCode.get(code) || (code || '-');
+    const rawName = String(x?.name || '').trim();
+    const name = !missingName(x) ? rawName : (nameByCode.get(code) || KNOWN_CODE_NAME_MAP.get(code) || code || '-');
     return { ...x, name };
   });
 }
+
+function isCodeLikeName(name = '', code = '') {
+  const n = String(name || '').trim();
+  const c = String(code || '').trim();
+  if (!n) return true;
+  if (/^\d{6}$/.test(n)) return true;
+  if (c && n === c) return true;
+  return false;
+}
+
+const INDUSTRY_TOP5_CURATED = {
+  软件开发: [
+    { name: '恒生电子', code: '600570' },
+    { name: '科大讯飞', code: '002230' },
+    { name: '用友网络', code: '600588' },
+    { name: '金山办公', code: '688111' },
+    { name: '同花顺', code: '300033' },
+  ],
+  半导体EDA: [
+    { name: '华大九天', code: '301269' },
+    { name: '概伦电子', code: '688206' },
+    { name: '广立微', code: '301095' },
+    { name: '上海贝岭', code: '600171' },
+    { name: '国民技术', code: '300077' },
+  ],
+  半导体芯片: [
+    { name: '闻泰科技', code: '600745' },
+    { name: '北方华创', code: '002371' },
+    { name: '海光信息', code: '688041' },
+    { name: '澜起科技', code: '688008' },
+    { name: '长电科技', code: '600584' },
+  ],
+};
 const FINANCIAL_LINKAGE_LIBRARY = {
   银行业: {
     upstream: ['中国银联股份有限公司', '中国人民银行清算总中心', '腾讯云计算（北京）有限责任公司'],
@@ -406,6 +458,7 @@ let dynamicCompanyIndustryOverrides = loadJson(DYNAMIC_COMPANY_INDUSTRY_OVERRIDE
 const CHINA500_INDUSTRY_ROWS = loadJson(CHINA500_INDUSTRY_REVIEW_PATH, []);
 const CHINA500_PEERS_RAW = loadJson(CHINA500_PEERS_PATH, {});
 const CHINA500_INDEX = buildChina500Index(CHINA500_INDUSTRY_ROWS, CHINA500_PEERS_RAW);
+const KNOWN_CODE_NAME_MAP = buildKnownCodeNameMap();
 {
   const seenLocal = new Set(localNamePool.map((x) => sanitizeLegalEntityName(x)).filter(Boolean));
   for (const r of CHINA500_INDUSTRY_ROWS) {
@@ -430,6 +483,32 @@ function saveJson(file, data) {
   } catch {
     // ignore persistence failures in MVP mode
   }
+}
+
+function buildKnownCodeNameMap() {
+  const m = new Map();
+  const push = (code = '', name = '') => {
+    const c = String(code || '').replace(/\D/g, '');
+    const n = String(name || '').trim();
+    if (!/^\d{6}$/.test(c) || !n) return;
+    m.set(c, n);
+  };
+  for (const x of localCompanies) {
+    push(String(x?.stockCode || '').replace(/\.(SH|SZ)$/i, ''), x?.shortName || x?.fullName || '');
+  }
+  for (const arr of Object.values(FINANCIAL_PEER_LIBRARY || {})) {
+    for (const x of (arr || [])) push(x?.code || '', x?.name || '');
+  }
+  const hardcoded = {
+    '600030': '中信证券',
+    '601336': '新华保险',
+    '688095': '福昕软件',
+    '688008': '澜起科技',
+    '600745': '闻泰科技',
+    '601211': '国泰海通',
+  };
+  for (const [k, v] of Object.entries(hardcoded)) push(k, v);
+  return m;
 }
 
 function toNumberLoose(v) {
@@ -2564,7 +2643,7 @@ async function top5ByIndustry(seed) {
       let stockName = x.name;
       if (!stockName) {
         const p = await withTimeout(stockProfile(mapSecId(x.code)), 1500, null);
-        stockName = p?.name || x.name;
+        stockName = p?.name || KNOWN_CODE_NAME_MAP.get(String(x.code || '')) || x.name;
       }
       return {
         code: x.code,
@@ -2587,12 +2666,30 @@ async function top5ByIndustry(seed) {
       if ((b.reportCount || 0) !== (a.reportCount || 0)) return (b.reportCount || 0) - (a.reportCount || 0);
       return (b.brokerCount || 0) - (a.brokerCount || 0);
     })
+    .filter((x) => !isCodeLikeName(x?.name, x?.code))
     .slice(0, 5);
 }
 
 async function top5ByIndustryNameFallback(industryName, limit = 5) {
   const ind = String(industryName || '').trim();
   if (!ind) return [];
+  const curated = Array.isArray(INDUSTRY_TOP5_CURATED[ind]) ? INDUSTRY_TOP5_CURATED[ind] : [];
+  if (curated.length) {
+    const rows = await Promise.all(curated.slice(0, limit).map(async (x) => {
+      const rev = await withTimeout(fetchRevenue(x.code), 2200, { revenue: null, fiscalYear: null, source: '' });
+      return {
+        code: x.code || '',
+        name: x.name || '',
+        industryName: ind,
+        reportCount: 0,
+        brokerCount: 0,
+        revenue: rev.revenue,
+        fiscalYear: rev.fiscalYear,
+        revenueSource: rev.source,
+      };
+    }));
+    return rows.filter((x) => !isCodeLikeName(x?.name, x?.code));
+  }
   const china500Rows = CHINA500_INDEX.byIndustry.get(ind) || [];
   if (china500Rows.length) {
     return china500Rows.slice(0, limit).map((x) => ({
@@ -2619,7 +2716,7 @@ async function top5ByIndustryNameFallback(industryName, limit = 5) {
         ]);
         return {
           code,
-          name: p?.name || '',
+          name: p?.name || KNOWN_CODE_NAME_MAP.get(String(code || '')) || '',
           industryName: p?.industryName || ind,
           reportCount: 0,
           brokerCount: 0,
@@ -2639,7 +2736,9 @@ async function top5ByIndustryNameFallback(industryName, limit = 5) {
       .filter((x) => !seen.has(x.code))
       .map((x) => ({ ...x, revenue: x.revenue, fiscalYear: x.fiscalYear, revenueSource: x.revenueSource }))
       .slice(0, Math.max(0, limit - ranked.length));
-    return [...ranked, ...extras].slice(0, limit);
+    return [...ranked, ...extras]
+      .filter((x) => !isCodeLikeName(x?.name, x?.code))
+      .slice(0, limit);
   }
   const terms = [ind];
   for (const x of ind.split(/[与和、/]/).map((s) => s.trim()).filter(Boolean)) {
@@ -2717,7 +2816,7 @@ async function top5ByIndustryNameFallback(industryName, limit = 5) {
     .filter((x) => Number.isFinite(x.revenue) && x.revenue > 0)
     .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
     .slice(0, limit);
-  return ranked;
+  return ranked.filter((x) => !isCodeLikeName(x?.name, x?.code));
 }
 
 async function onlineRelationSuggest(companyName, keyword, limit = 20) {
