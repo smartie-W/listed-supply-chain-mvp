@@ -2962,7 +2962,9 @@ async function pickCustomersOnline(companyCode, companyName, industryName, limit
       if (!n) return false;
       if (isSameEntityOrBrandFamily(companyName, n) || isLikelyNearNameVariant(companyName, n)) return false;
       if (looksLikeLegalEntityName(n)) return true;
-      return isLikelyCompanyToken(n) && n.length <= 12;
+      // For customer/supplier, only keep clear organization entities, not generic industry words.
+      if (/(公司|集团|银行|证券|基金|交易所|研究院|中心|协会|医院|学校|大学|事务所|控股|股份|有限)/.test(n)) return true;
+      return false;
     })
     .slice(0, Math.min(8, limit))
     .map((x) => ({
@@ -2988,7 +2990,9 @@ async function pickSuppliers(companyCode, companyName, industryName, limit = 20)
       if (!n) return false;
       if (isSameEntityOrBrandFamily(companyName, n) || isLikelyNearNameVariant(companyName, n)) return false;
       if (looksLikeLegalEntityName(n)) return true;
-      return isLikelyCompanyToken(n) && n.length <= 12;
+      // For customer/supplier, only keep clear organization entities, not generic industry words.
+      if (/(公司|集团|银行|证券|基金|交易所|研究院|中心|协会|医院|学校|大学|事务所|控股|股份|有限)/.test(n)) return true;
+      return false;
     })
     .slice(0, Math.min(8, limit))
     .map((x) => ({
@@ -3721,7 +3725,6 @@ const server = http.createServer(async (req, res) => {
       suppliers = suppliers.length ? suppliers : suppliersFetched;
     }
 
-    const allowGenericLinkageFallback = !nonListed || isFinancialReviewIndustry || isChina500Fast || isSemiconIndustry;
     if (isFinancialReviewIndustry) {
       if (!top5.length) top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
       if (!competitorsFinal.length) competitorsFinal = buildFinancialPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
@@ -3732,14 +3735,8 @@ const server = http.createServer(async (req, res) => {
       suppliers = suppliers.length ? suppliers : buildSemiconLinkageRows('upstream', profile.name || candidate.name, 6);
       customers = customers.length ? customers : buildSemiconLinkageRows('downstream', profile.name || candidate.name, 6);
     }
-    if (isChina500Fast) {
-      suppliers = suppliers.length ? suppliers : buildIndustryHintRows(industry.industryName || industryName, 'upstream', profile.name || candidate.name, 8);
-      customers = customers.length ? customers : buildIndustryHintRows(industry.industryName || industryName, 'downstream', profile.name || candidate.name, 8);
-    }
-    if (allowGenericLinkageFallback) {
-      suppliers = suppliers.length ? suppliers : buildIndustryHintRows(industry.industryName || industryName, 'upstream', profile.name || candidate.name, 6);
-      customers = customers.length ? customers : buildIndustryHintRows(industry.industryName || industryName, 'downstream', profile.name || candidate.name, 6);
-    }
+    // Suppliers/customers must be entity evidence, never generic industry words.
+    // Keep empty if no verifiable chain is found.
     if (!top5.length) {
       top5 = await withTimeout(top5ByIndustryNameFallback(industry.industryName || industryName, 5), 5000, []);
     }
@@ -3896,7 +3893,6 @@ const server = http.createServer(async (req, res) => {
         })
         .catch(() => {});
 
-      const allowGenericLinkageFallback = !nonListed || isFinancialReviewIndustryBase || isChina500Fast || SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2);
       const top5Task = withTimeout((async () => {
         const t0 = Date.now();
         const brokerMeta = await pBrokerMeta;
@@ -4030,20 +4026,12 @@ const server = http.createServer(async (req, res) => {
           recordPerf('customers', Date.now() - t0);
           return linked;
         }
-        if (isChina500Fast) {
-          const linked = buildIndustryHintRows(baseIndustry.industryName || profile.industryName || '', 'downstream', baseCompany.name, 8);
-          recordPerf('customers', Date.now() - t0);
-          return linked;
-        }
         const out = await pickCustomersOnline(code, baseCompany.name, profile.industryName, 20);
         recordPerf('customers', Date.now() - t0);
         if (!out.length && SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
           return buildSemiconLinkageRows('downstream', baseCompany.name, 6);
         }
         if (out.length) return out;
-        if (allowGenericLinkageFallback) {
-          return buildIndustryHintRows(baseIndustry.industryName || profile.industryName || '', 'downstream', baseCompany.name, 6);
-        }
         return [];
       })(), 9000, []);
 
@@ -4064,20 +4052,12 @@ const server = http.createServer(async (req, res) => {
           recordPerf('suppliers', Date.now() - t0);
           return linked;
         }
-        if (isChina500Fast) {
-          const linked = buildIndustryHintRows(baseIndustry.industryName || profile.industryName || '', 'upstream', baseCompany.name, 8);
-          recordPerf('suppliers', Date.now() - t0);
-          return linked;
-        }
         const out = await pickSuppliers(code, baseCompany.name, profile.industryName, 20);
         recordPerf('suppliers', Date.now() - t0);
         if (!out.length && SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
           return buildSemiconLinkageRows('upstream', baseCompany.name, 6);
         }
         if (out.length) return out;
-        if (allowGenericLinkageFallback) {
-          return buildIndustryHintRows(baseIndustry.industryName || profile.industryName || '', 'upstream', baseCompany.name, 6);
-        }
         return [];
       })(), 9000, []);
 
