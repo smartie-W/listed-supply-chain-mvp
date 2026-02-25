@@ -246,6 +246,7 @@ const COMPANY_INDUSTRY_OVERRIDES = [
 ];
 const COMPANY_WEBSITE_OVERRIDES = [
   { names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'], website: 'https://www.cjltv.com' },
+  { names: ['江苏恒瑞医药股份有限公司', '恒瑞医药'], website: 'https://www.hengrui.com' },
 ];
 const COMPANY_CODE_ALIASES = {
   '603501': ['韦尔股份', '豪威集团', '豪威集成电路'],
@@ -2245,6 +2246,37 @@ async function fetchFullCompanyNameByCode(code) {
   }
 }
 
+async function fetchListedCompanyWebsiteByCode(code) {
+  const pure = String(code || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(pure)) return '';
+  const key = `listedWebsite:${pure}`;
+  const cached = cacheGet(key);
+  if (cached !== undefined && cached !== null) return String(cached || '');
+  const market = /^(6|9)/.test(pure) ? 'SH' : 'SZ';
+  const url = `https://emweb.securities.eastmoney.com/PC_HSF10/CompanySurvey/CompanySurveyAjax?code=${market}${pure}`;
+  try {
+    const txt = await fetchText(url);
+    const j = parseMaybeJsonp(txt) || {};
+    const jbzl = j?.jbzl || {};
+    const candidate = [
+      jbzl?.gswz,
+      jbzl?.wz,
+      jbzl?.website,
+      j?.gswz,
+      j?.wz,
+      j?.website,
+    ].find((x) => String(x || '').trim());
+    let site = String(candidate || '').trim();
+    if (site && !/^https?:\/\//i.test(site)) site = `https://${site}`;
+    if (!/^https?:\/\/[^\s]+/i.test(site)) site = '';
+    cacheSet(key, site, site ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
+    return site;
+  } catch {
+    cacheSet(key, '', 10 * 60 * 1000);
+    return '';
+  }
+}
+
 async function brokerReportIndustryPeers(indvInduCode, pageLimit = 2) {
   const code = String(indvInduCode || '').trim();
   if (!code) return [];
@@ -3713,17 +3745,18 @@ const server = http.createServer(async (req, res) => {
     const { candidate, secid, profile, nonListed } = ctx;
     const code = profile.code || candidate.code || '';
 
-    const [revenue, brokerMeta, annual, financing, discoveredSite, webIndustryHint] = await Promise.all([
+    const [revenue, brokerMeta, annual, financing, discoveredSite, listedSite, webIndustryHint] = await Promise.all([
       code ? withTimeout(fetchRevenue(code), 3000, { revenue: null, fiscalYear: null, source: '' }) : Promise.resolve({ revenue: null, fiscalYear: null, source: '' }),
       code ? withTimeout(brokerMetaForStock(code), 2500, { indvInduCode: '', indvInduName: '' }) : Promise.resolve({ indvInduCode: '', indvInduName: '' }),
       code ? withTimeout(extractAnnualRelations(code, 2024), 6500, { customers: [], suppliers: [], meta: { found: false } }) : Promise.resolve({ customers: [], suppliers: [], meta: { found: false } }),
       nonListed ? withTimeout(fetchNonListedFinancing(profile.name || candidate.name, 6), 3500, { roundsCount: null, events: [], source: '' }) : Promise.resolve({ roundsCount: null, events: [], source: '' }),
       nonListed && !profile.website ? withTimeout(discoverOfficialWebsite(profile.name || candidate.name), 5000, '') : Promise.resolve(profile.website || ''),
+      !nonListed && code && !profile.website ? withTimeout(fetchListedCompanyWebsiteByCode(code), 3500, '') : Promise.resolve(''),
       nonListed ? withTimeout(inferIndustryByWeb(profile.name || candidate.name), 8000, '') : Promise.resolve(''),
     ]);
     const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
     const industryName = brokerMeta.indvInduName || profile.industryName || '';
-    const website = websiteOverrideByName(profile.name || candidate.name || q) || profile.website || discoveredSite || '';
+    const website = websiteOverrideByName(profile.name || candidate.name || q) || profile.website || listedSite || discoveredSite || '';
     const industry = classifyIndustryDetailed(
       `${profile.name || candidate.name || ''} ${webIndustryHint || industryName || profile.industryName || ''}`.trim(),
     );
@@ -3961,9 +3994,13 @@ const server = http.createServer(async (req, res) => {
       const pFinancing = nonListed
         ? withTimeout(fetchNonListedFinancing(baseCompany.name, 6), 4000, { roundsCount: null, events: [], source: '' })
         : Promise.resolve({ roundsCount: null, events: [], source: '' });
-      const pWebsite = nonListed && !(profile.website || websiteOverrideByName(baseCompany.name))
-        ? withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '')
-        : Promise.resolve(websiteOverrideByName(baseCompany.name) || profile.website || '');
+      const pWebsite = (() => {
+        const forced = websiteOverrideByName(baseCompany.name) || profile.website || '';
+        if (forced) return Promise.resolve(forced);
+        if (!nonListed && code) return withTimeout(fetchListedCompanyWebsiteByCode(code), 3500, '');
+        if (nonListed) return withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '');
+        return Promise.resolve('');
+      })();
       const pWebIndustry = nonListed
         ? withTimeout(inferIndustryByWeb(baseCompany.name), 8000, '')
         : Promise.resolve('');
