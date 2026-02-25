@@ -333,7 +333,16 @@ async function fillDisplayNamesByCode(rows = []) {
     if (!/^\d{6}$/.test(code) || nameByCode.has(code)) return;
     const p = await withTimeout(stockProfile(mapSecId(code)), 1800, null);
     const name = String(p?.name || '').trim();
-    if (name && !/^\d{6}$/.test(name)) nameByCode.set(code, name);
+    if (name && !/^\d{6}$/.test(name)) {
+      nameByCode.set(code, name);
+      return;
+    }
+    // Secondary fallback: query suggestion by code and pick exact code hit.
+    const rows = await withTimeout(eastmoneySuggest(code, 8), 2500, []);
+    const hit = (rows || []).find((r) => String(r?.code || '') === code && String(r?.name || '').trim());
+    if (hit?.name && !/^\d{6}$/.test(String(hit.name).trim())) {
+      nameByCode.set(code, String(hit.name).trim());
+    }
   }));
   return list.map((x) => {
     const code = String(x?.code || '').trim();
