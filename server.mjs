@@ -198,6 +198,11 @@ const INDUSTRY_HEAD_SEED_CODES = {
   '金融服务': ['600030', '601211', '601688', '000776', '600999', '601881', '001236', '603093', '002961', '600927'],
   '软件与信息服务': ['600588', '600570', '002230', '002410', '300033', '688111', '600718', '688023'],
   '半导体EDA': ['301269', '688206', '301095', '688521', '688008'],
+  晶圆制造: ['688981', '1347', '00981', '688249', '600460'],
+  封装测试: ['600584', '002185', '002156', '603005', '688362'],
+  半导体设备: ['002371', '688012', '688082', '688072', '688120'],
+  半导体材料: ['688126', '605358', '688233', '300666', '300346'],
+  芯片设计: ['603986', '688256', '688041', '300223', '300661'],
   '消费电子': ['002475', '601138', '002241', '300433', '603296'],
   '电子元件制造': ['002475', '002179', '300679', '002055', '603920', '300408', '600563', '300976', '002138', '300327'],
   '开关与低压电器': ['601877', '601126', '002706', '603195', '601100'],
@@ -215,6 +220,11 @@ const INDUSTRY_TAXONOMY = [
   { l1: '电子信息', l2: '消费电子', re: /(消费电子|智能终端|电子制造|果链|手机零部件|可穿戴)/, upstream: ['芯片', '结构件', '显示模组'], downstream: ['终端品牌', '渠道商'] },
   { l1: '工业', l2: '电子元件制造', re: /(电子元件|电子器件|元器件|连接器|接插件|继电器|端子|电容|电阻|电感|晶振|印制电路|PCB|线路板)/i, upstream: ['铜材', '树脂基材', '半导体芯片'], downstream: ['消费电子', '汽车电子', '工业控制'] },
   { l1: '工业', l2: '开关与低压电器', re: /(低压电器|断路器|接触器|开关设备|墙壁开关|插座|配电电器|终端配电)/i, upstream: ['铜材', '电子元件', '塑胶与金属件'], downstream: ['地产精装', '工业配电', '商业建筑', '家装零售'] },
+  { l1: '电子信息', l2: '晶圆制造', re: /(晶圆代工|晶圆制造|foundry|wafer|IDM|存储制造|DRAM|NAND)/i, upstream: ['半导体设备', '半导体材料', 'EDA'], downstream: ['封装测试', '芯片设计'] },
+  { l1: '电子信息', l2: '封装测试', re: /(封装测试|封测|OSAT|先进封装|探针测试|成品测试)/i, upstream: ['晶圆制造', '封装材料', '测试设备'], downstream: ['消费电子', '汽车电子', '工业电子'] },
+  { l1: '电子信息', l2: '半导体设备', re: /(半导体设备|光刻|刻蚀|沉积|清洗|量测|探针台|测试机|CMP|涂胶显影|薄膜设备)/i, upstream: ['精密零部件', '工业软件', '控制系统'], downstream: ['晶圆制造', '封装测试'] },
+  { l1: '电子信息', l2: '半导体材料', re: /(半导体材料|大硅片|光刻胶|电子特气|靶材|抛光液|前驱体|掩膜版|封装材料)/i, upstream: ['化工原料', '高纯金属', '气体'], downstream: ['晶圆制造', '封装测试'] },
+  { l1: '电子信息', l2: '芯片设计', re: /(芯片设计|IC设计|SoC|Fabless|微电子设计|处理器设计|模拟芯片设计)/i, upstream: ['EDA', 'IP核', '晶圆代工'], downstream: ['消费电子', '汽车电子', '工业控制'] },
   { l1: '电子信息', l2: '半导体芯片', re: /(半导体|芯片|集成电路|存储|传感器|CMOS|晶圆|封测)/i, upstream: ['晶圆厂', '材料设备', 'EDA工具'], downstream: ['消费电子', '汽车电子', '工业电子'] },
   { l1: '工业', l2: '智能制造', re: /(智能制造|装备制造|工业机器人|高端装备|数字化工厂|工业自动化)/, upstream: ['伺服驱动', '传感器', '工控芯片'], downstream: ['制造业', '汽车', '能源'] },
   { l1: '汽车', l2: '汽车供应链', re: /(汽车供应链|汽车零部件|汽车电子|智能座舱|热管理|底盘|线束|车规)/, upstream: ['芯片', '传感器', '材料'], downstream: ['整车厂', '一级供应商'] },
@@ -957,11 +967,13 @@ const localCompanies = loadJson(path.join(ROOT, 'data', 'companies.json'), []);
 const INDUSTRY_KNOWLEDGE_PATH = path.join(ROOT, 'data', 'industry_knowledge.json');
 const INDUSTRY_REVIEW_REPORT_PATH = path.join(ROOT, 'data', 'industry_review_report.json');
 const DYNAMIC_COMPANY_INDUSTRY_OVERRIDES_PATH = path.join(ROOT, 'data', 'company_industry_overrides_dynamic.json');
+const CHIP_SUBSEGMENT_OVERRIDES_PATH = path.join(ROOT, 'data', 'chip_subsegment_overrides.json');
 const CHINA500_INDUSTRY_REVIEW_PATH = path.join(ROOT, 'data', 'china500_2025_industry_review.json');
 const CHINA500_PEERS_PATH = path.join(ROOT, 'data', 'china500_2025_company_peers.json');
 let industryKnowledge = loadJson(INDUSTRY_KNOWLEDGE_PATH, { updatedAt: '', industries: {} });
 const SEMICON_TOP150_OVERRIDES = loadJson(path.join(ROOT, 'data', 'semiconductor_top150_overrides.json'), { rows: [] }).rows || [];
 let dynamicCompanyIndustryOverrides = loadJson(DYNAMIC_COMPANY_INDUSTRY_OVERRIDES_PATH, { updatedAt: '', rows: [] }).rows || [];
+const CHIP_SUBSEGMENT_OVERRIDES = loadJson(CHIP_SUBSEGMENT_OVERRIDES_PATH, { rows: [] }).rows || [];
 const CHINA500_INDUSTRY_ROWS = loadJson(CHINA500_INDUSTRY_REVIEW_PATH, []);
 const CHINA500_PEERS_RAW = loadJson(CHINA500_PEERS_PATH, {});
 const CHINA500_INDEX = buildChina500Index(CHINA500_INDUSTRY_ROWS, CHINA500_PEERS_RAW);
@@ -1540,6 +1552,20 @@ function classifyIndustryDetailed(input = '') {
         industryName: ov.l2 || '综合行业',
         upstream: item?.upstream || ['原材料', '设备', '技术服务'],
         downstream: item?.downstream || ['企业客户', '渠道客户'],
+      };
+    }
+  }
+  for (const ov of CHIP_SUBSEGMENT_OVERRIDES) {
+    const key = normalizeName(ov?.name || '');
+    if (!key) continue;
+    if (n.includes(key) || key.includes(n)) {
+      const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
+      return {
+        industryLevel1: ov.l1 || item?.l1 || '电子信息',
+        industryLevel2: ov.l2 || '半导体制造',
+        industryName: ov.l2 || '半导体制造',
+        upstream: item?.upstream || ['设备材料', 'EDA'],
+        downstream: item?.downstream || ['电子信息', '汽车电子'],
       };
     }
   }
