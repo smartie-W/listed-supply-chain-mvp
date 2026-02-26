@@ -44,6 +44,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .net-badge {
@@ -91,6 +93,20 @@ body {
   color: #9b2e25;
   border-color: #e2b2ad;
   background: #fff2f1;
+}
+
+.backend-meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #c2ced8;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ghost-btn {

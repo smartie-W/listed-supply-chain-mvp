@@ -7,6 +7,7 @@ const els = {
   supplierBody: document.querySelector('#supplierBody'),
   customerBody: document.querySelector('#customerBody'),
   networkStatus: document.querySelector('#networkStatus'),
+  backendMeta: document.querySelector('#backendMeta'),
 };
 
 let API_BASE = '';
@@ -34,6 +35,7 @@ init();
 
 function init() {
   setNetworkStatus('checking');
+  renderBackendMeta(null);
   if (state.initCheckTimer) clearTimeout(state.initCheckTimer);
   state.initCheckTimer = setTimeout(() => {
     if (!API_BASE) setNetworkStatus('offline');
@@ -289,11 +291,11 @@ async function checkApiHealth(base) {
   const t = timeoutSignal(2800);
   try {
     const res = await fetch(`${base}/api/health`, { signal: t.signal });
-    if (!res.ok) return false;
+    if (!res.ok) return { ok: false, data: null };
     const data = await res.json().catch(() => ({}));
-    return !!data?.ok;
+    return { ok: !!data?.ok, data };
   } catch {
-    return false;
+    return { ok: false, data: null };
   } finally {
     t.clear();
   }
@@ -310,17 +312,19 @@ async function ensureApiBase() {
     return;
   }
   const checks = await Promise.all(candidates.map((base) => checkApiHealth(base)));
-  const firstOk = checks.findIndex(Boolean);
+  const firstOk = checks.findIndex((x) => !!x?.ok);
   if (firstOk >= 0) {
     state.apiIndex = firstOk;
     API_BASE = candidates[firstOk];
     state.offlineMode = false;
     localStorage.setItem('APP_API_BASE', API_BASE);
+    renderBackendMeta(checks[firstOk]?.data || null);
     setNetworkStatus('online');
     return;
   }
   API_BASE = '';
   state.offlineMode = true;
+  renderBackendMeta(null);
   setNetworkStatus('offline');
   if (window.location.hostname.endsWith('github.io')) {
     els.suggestions.innerHTML = "<p class='hint'>当前未连接后端，暂不可联网查询。请使用参数：<code>?api=https://你的后端域名</code></p>";
@@ -371,7 +375,7 @@ function renderOverview(company) {
       <li><span>证券代码</span>${escapeHtml(company.code || '-')}</li>
       <li><span>一级行业</span>${escapeHtml(industryL1)}</li>
       <li><span>二级行业</span>${escapeHtml(industryL2)}</li>
-      <li><span>官网</span>${company.website ? `<a class="link" href="${escapeAttr(company.website)}" target="_blank" rel="noreferrer">打开官网</a>` : '未识别'}</li>
+      <li><span>官网</span>${renderWebsiteLink(company.website)}</li>
       <li><span>财年</span>${escapeHtml(String(yearText))}</li>
       <li><span>营业收入</span>${escapeHtml(revenueText)}</li>
       ${financingHtml}
@@ -528,6 +532,32 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
   return escapeHtml(String(s));
+}
+
+function normalizeWebsiteUrl(raw = '') {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  const candidate = /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
+  try {
+    const u = new URL(candidate);
+    if (!/^https?:$/i.test(u.protocol)) return '';
+    return u.toString();
+  } catch {
+    return '';
+  }
+}
+
+function renderWebsiteLink(raw = '') {
+  const href = normalizeWebsiteUrl(raw);
+  if (!href) return '未识别';
+  let label = href;
+  try {
+    const u = new URL(href);
+    label = `${u.host}${u.pathname === '/' ? '' : u.pathname}`.slice(0, 64);
+  } catch {
+    // keep href as fallback label
+  }
+  return `<a class="link" href="${escapeAttr(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(label)}</a>`;
 }
 
 function parseEventData(ev) {
@@ -784,4 +814,27 @@ function setNetworkStatus(mode) {
   }
   els.networkStatus.classList.add('net-offline');
   els.networkStatus.textContent = '未联网';
+}
+
+function renderBackendMeta(data) {
+  if (!els.backendMeta) return;
+  const backend = data?.backend || {};
+  const version = String(backend.version || '-').trim() || '-';
+  const updatedAt = formatDateTime(backend.updatedAt || data?.now || '');
+  const commit = String(backend.commit || '').trim();
+  const commitText = commit ? ` ｜ Commit: ${commit.slice(0, 8)}` : '';
+  els.backendMeta.textContent = `后端版本: ${version} ｜ 更新时间: ${updatedAt}${commitText}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
 }

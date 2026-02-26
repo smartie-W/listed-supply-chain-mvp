@@ -9,6 +9,27 @@ import { promisify } from 'node:util';
 const ROOT = path.resolve('/Users/wang/Documents/codex/listed-supply-chain-mvp');
 const PORT = Number(process.env.PORT || 8090);
 const HOST = process.env.HOST || '0.0.0.0';
+const SERVER_STARTED_AT = new Date().toISOString();
+const PACKAGE_VERSION = (() => {
+  try {
+    const file = path.join(ROOT, 'package.json');
+    const raw = fs.readFileSync(file, 'utf8');
+    return String(JSON.parse(raw)?.version || '').trim() || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+})();
+const SERVER_FILE_UPDATED_AT = (() => {
+  try {
+    return fs.statSync(path.join(ROOT, 'server.mjs')).mtime.toISOString();
+  } catch {
+    return '';
+  }
+})();
+const BUILD_COMMIT =
+  String(process.env.BUILD_COMMIT || process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || '').trim() || '';
+const BUILD_UPDATED_AT =
+  String(process.env.BUILD_UPDATED_AT || process.env.BUILD_TIME || process.env.DEPLOYED_AT || '').trim() || '';
 const execFileAsync = promisify(execFile);
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const cache = new Map();
@@ -3515,7 +3536,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (u.pathname === '/api/health') {
-    return json(res, { ok: true, localNamePool: localNamePool.length, now: new Date().toISOString() });
+    return json(res, {
+      ok: true,
+      localNamePool: localNamePool.length,
+      now: new Date().toISOString(),
+      backend: {
+        version: PACKAGE_VERSION,
+        commit: BUILD_COMMIT,
+        updatedAt: BUILD_UPDATED_AT || SERVER_FILE_UPDATED_AT || SERVER_STARTED_AT,
+      },
+    });
   }
 
   if (u.pathname === '/api/perf') {
