@@ -587,6 +587,14 @@ const KNOWN_CODE_NAME_MAP = buildKnownCodeNameMap();
     seenLocal.add(n);
     localNamePool.push(n);
   }
+  // Batch import semiconductor Top list names into local suggestion pool
+  // to reduce missed-match regressions for non-listed full names.
+  for (const r of SEMICON_TOP150_OVERRIDES) {
+    const n = sanitizeLegalEntityName(r?.name || '');
+    if (!n || seenLocal.has(n)) continue;
+    seenLocal.add(n);
+    localNamePool.push(n);
+  }
 }
 
 function loadJson(file, fallback) {
@@ -985,15 +993,28 @@ function findIndustryOverrideByName(name = '') {
   if (!q) return null;
   const c500 = findChina500ByName(q);
   if (c500?.l2) return { names: [c500.name], l1: c500.l1 || industryL1ByL2(c500.l2) || '综合', l2: c500.l2 };
+
+  const overrideNameHit = (queryName = '', candidateName = '') => {
+    const qn = sanitizeLegalEntityName(queryName);
+    const cn = sanitizeLegalEntityName(candidateName);
+    if (!qn || !cn) return false;
+    if (qn === cn) return true;
+    if (qn.includes(cn) || cn.includes(qn)) return true;
+    const qCore = coreCompanyName(qn);
+    const cCore = coreCompanyName(cn);
+    if (qCore && cCore && (qCore === cCore || qCore.includes(cCore) || cCore.includes(qCore))) return true;
+    return overlapScoreEnhanced(qn, cn) >= 86;
+  };
+
   for (const ov of dynamicCompanyIndustryOverrides) {
-    if (sanitizeLegalEntityName(ov?.name || '') === q) return { names: [ov.name], l1: ov.l1, l2: ov.l2 };
+    if (overrideNameHit(q, ov?.name || '')) return { names: [ov.name], l1: ov.l1, l2: ov.l2 };
   }
   for (const ov of COMPANY_INDUSTRY_OVERRIDES) {
-    const hit = (ov.names || []).some((n) => sanitizeLegalEntityName(n) === q);
+    const hit = (ov.names || []).some((n) => overrideNameHit(q, n));
     if (hit) return ov;
   }
   for (const ov of SEMICON_TOP150_OVERRIDES) {
-    if (sanitizeLegalEntityName(ov?.name || '') === q) return { names: [ov.name], l1: ov.l1, l2: ov.l2 };
+    if (overrideNameHit(q, ov?.name || '')) return { names: [ov.name], l1: ov.l1, l2: ov.l2 };
   }
   return null;
 }
@@ -1107,6 +1128,17 @@ function classifyIndustryDetailed(input = '') {
   const text = String(input || '').replace(/\s+/g, ' ').trim().slice(0, 240);
   const plain = text.replace(/\s+/g, '');
   const n = normalizeName(text);
+  const overrideNameHit = (queryName = '', candidateName = '') => {
+    const qn = sanitizeLegalEntityName(queryName);
+    const cn = sanitizeLegalEntityName(candidateName);
+    if (!qn || !cn) return false;
+    if (qn === cn) return true;
+    if (qn.includes(cn) || cn.includes(qn)) return true;
+    const qCore = coreCompanyName(qn);
+    const cCore = coreCompanyName(cn);
+    if (qCore && cCore && (qCore === cCore || qCore.includes(cCore) || cCore.includes(qCore))) return true;
+    return overlapScoreEnhanced(qn, cn) >= 86;
+  };
   const c500 = findChina500ByName(text);
   if (c500?.l2) {
     const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === c500.l2);
@@ -1133,7 +1165,7 @@ function classifyIndustryDetailed(input = '') {
     }
   }
   for (const ov of COMPANY_INDUSTRY_OVERRIDES) {
-    const hit = (ov.names || []).some((x) => normalizeName(x) && (n.includes(normalizeName(x)) || normalizeName(x).includes(n)));
+    const hit = (ov.names || []).some((x) => overrideNameHit(text, x));
     if (hit) {
       const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
       return {
@@ -1146,9 +1178,7 @@ function classifyIndustryDetailed(input = '') {
     }
   }
   for (const ov of SEMICON_TOP150_OVERRIDES) {
-    const key = normalizeName(ov?.name || '');
-    if (!key) continue;
-    if (n.includes(key) || key.includes(n)) {
+    if (overrideNameHit(text, ov?.name || '')) {
       const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
       return {
         industryLevel1: ov.l1 || item?.l1 || '工业',
