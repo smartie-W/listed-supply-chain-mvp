@@ -1,0 +1,502 @@
+[
+  {
+    "input": "立讯精密工业股份有限公司",
+    "matched": "立讯精密工业股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 8.042,
+    "status": "ok"
+  },
+  {
+    "input": "中航光电科技股份有限公司",
+    "matched": "中航光电",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.jonhon.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 10.904,
+    "status": "ok"
+  },
+  {
+    "input": "电连技术股份有限公司",
+    "matched": "电连技术",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.ectsz.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.839,
+    "status": "ok"
+  },
+  {
+    "input": "长盈精密技术股份有限公司",
+    "matched": "长盈精密技术股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 16.69,
+    "status": "ok"
+  },
+  {
+    "input": "得润电子股份有限公司",
+    "matched": "得润电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 17.147,
+    "status": "ok"
+  },
+  {
+    "input": "胜蓝科技股份有限公司",
+    "matched": "胜蓝股份",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.jctc.com.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 11.5,
+    "status": "ok"
+  },
+  {
+    "input": "瑞可达连接系统股份有限公司",
+    "matched": "瑞可达连接系统股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.783,
+    "status": "ok"
+  },
+  {
+    "input": "徕木电子股份有限公司",
+    "matched": "徕木电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.194,
+    "status": "ok"
+  },
+  {
+    "input": "鼎通科技股份有限公司",
+    "matched": "鼎通科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.457,
+    "status": "ok"
+  },
+  {
+    "input": "意华控股集团股份有限公司",
+    "matched": "意华控股集团股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.313,
+    "status": "ok"
+  },
+  {
+    "input": "永贵电器股份有限公司",
+    "matched": "永贵电器股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.2,
+    "status": "ok"
+  },
+  {
+    "input": "贵州航天电器股份有限公司",
+    "matched": "航天电器",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.gzhtdq.com.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.221,
+    "status": "ok"
+  },
+  {
+    "input": "宏发科技股份有限公司",
+    "matched": "宏发股份",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.hongfa.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 9.292,
+    "status": "ok"
+  },
+  {
+    "input": "顺络电子股份有限公司",
+    "matched": "顺络电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 16.994,
+    "status": "ok"
+  },
+  {
+    "input": "风华高新科技股份有限公司",
+    "matched": "风华高新科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.707,
+    "status": "ok"
+  },
+  {
+    "input": "三环集团股份有限公司",
+    "matched": "三环集团股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.307,
+    "status": "ok"
+  },
+  {
+    "input": "火炬电子科技股份有限公司",
+    "matched": "火炬电子科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.668,
+    "status": "ok"
+  },
+  {
+    "input": "振华科技股份有限公司",
+    "matched": "振华科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.057,
+    "status": "ok"
+  },
+  {
+    "input": "法拉电子股份有限公司",
+    "matched": "法拉电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.308,
+    "status": "ok"
+  },
+  {
+    "input": "江海电容器股份有限公司",
+    "matched": "江海电容器股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 11.972,
+    "status": "ok"
+  },
+  {
+    "input": "艾华集团股份有限公司",
+    "matched": "艾华集团股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 14.569,
+    "status": "ok"
+  },
+  {
+    "input": "铜峰电子股份有限公司",
+    "matched": "铜峰电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.144,
+    "status": "ok"
+  },
+  {
+    "input": "泰晶科技股份有限公司",
+    "matched": "泰晶科技",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.sztkd.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.979,
+    "status": "ok"
+  },
+  {
+    "input": "洁美科技股份有限公司",
+    "matched": "洁美科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 16.435,
+    "status": "ok"
+  },
+  {
+    "input": "生益科技股份有限公司",
+    "matched": "生益科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 11.565,
+    "status": "ok"
+  },
+  {
+    "input": "生益电子股份有限公司",
+    "matched": "生益电子",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.sye.com.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 11.821,
+    "status": "ok"
+  },
+  {
+    "input": "深南电路股份有限公司",
+    "matched": "深南电路",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.scc.com.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 11.701,
+    "status": "ok"
+  },
+  {
+    "input": "沪电股份有限公司",
+    "matched": "沪电股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 16.063,
+    "status": "ok"
+  },
+  {
+    "input": "景旺电子科技股份有限公司",
+    "matched": "景旺电子科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.177,
+    "status": "ok"
+  },
+  {
+    "input": "崇达技术股份有限公司",
+    "matched": "崇达技术",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.suntakpcb.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.35,
+    "status": "ok"
+  },
+  {
+    "input": "兴森快捷电路科技股份有限公司",
+    "matched": "兴森快捷电路科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 19.662,
+    "status": "ok"
+  },
+  {
+    "input": "鹏鼎控股(深圳)股份有限公司",
+    "matched": "鹏鼎控股(深圳)股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 5.713,
+    "status": "ok"
+  },
+  {
+    "input": "东山精密制造股份有限公司",
+    "matched": "苏州东山精密制造股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 4.813,
+    "status": "ok"
+  },
+  {
+    "input": "奥士康科技股份有限公司",
+    "matched": "奥士康",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.askpcb.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.553,
+    "status": "ok"
+  },
+  {
+    "input": "明阳电路科技股份有限公司",
+    "matched": "明阳电路科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 16.121,
+    "status": "ok"
+  },
+  {
+    "input": "超声电子股份有限公司",
+    "matched": "超声电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.814,
+    "status": "ok"
+  },
+  {
+    "input": "天津普林电路股份有限公司",
+    "matched": "天津普林电路股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.268,
+    "status": "ok"
+  },
+  {
+    "input": "金禄电子科技股份有限公司",
+    "matched": "金禄电子",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.camelotpcb.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.216,
+    "status": "ok"
+  },
+  {
+    "input": "方正科技集团股份有限公司",
+    "matched": "方正科技",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.foundertech.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 8.384,
+    "status": "ok"
+  },
+  {
+    "input": "依顿电子科技股份有限公司",
+    "matched": "依顿电子科技股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.461,
+    "status": "ok"
+  },
+  {
+    "input": "公牛集团股份有限公司",
+    "matched": "公牛集团",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "https://www.gongniu.cn",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.66,
+    "status": "ok"
+  },
+  {
+    "input": "正泰电器股份有限公司",
+    "matched": "浙江正泰电器股份有限公司",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 4.829,
+    "status": "ok"
+  },
+  {
+    "input": "良信电器股份有限公司",
+    "matched": "良信电器股份有限公司",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 14.368,
+    "status": "ok"
+  },
+  {
+    "input": "天正电气股份有限公司",
+    "matched": "天正电气股份有限公司",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 15.678,
+    "status": "ok"
+  },
+  {
+    "input": "宏业电子元件有限公司",
+    "matched": "宏业电子元件有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 12.548,
+    "status": "ok"
+  },
+  {
+    "input": "深圳市长盈精密技术股份有限公司",
+    "matched": "深圳市长盈精密技术股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 14.738,
+    "status": "ok"
+  },
+  {
+    "input": "深圳市得润电子股份有限公司",
+    "matched": "深圳市得润电子股份有限公司",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 13.653,
+    "status": "ok"
+  },
+  {
+    "input": "苏州瑞可达连接系统股份有限公司",
+    "matched": "瑞可达",
+    "l1": "工业",
+    "l2": "电子元件制造",
+    "website": "https://www.recodeal.com",
+    "hit_subsegment": "Y",
+    "latency_sec": 10.362,
+    "status": "ok"
+  },
+  {
+    "input": "中山市公牛电器有限公司",
+    "matched": "中山市公牛电器有限公司",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 14.735,
+    "status": "ok"
+  },
+  {
+    "input": "宁波公牛电器有限公司",
+    "matched": "宁波公牛电器有限公司",
+    "l1": "工业",
+    "l2": "开关与低压电器",
+    "website": "",
+    "hit_subsegment": "Y",
+    "latency_sec": 14.262,
+    "status": "ok"
+  }
+]
