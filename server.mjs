@@ -1,12 +1,12 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { URL } from 'node:url';
+import { URL, fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-const ROOT = path.resolve('/Users/wang/Documents/codex/listed-supply-chain-mvp');
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8090);
 const HOST = process.env.HOST || '0.0.0.0';
 const SERVER_STARTED_AT = new Date().toISOString();
