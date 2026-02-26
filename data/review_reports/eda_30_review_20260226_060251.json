@@ -1,0 +1,302 @@
+[
+  {
+    "input": "北京华大九天科技股份有限公司",
+    "matched": "北京华大九天科技股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 7.756,
+    "status": "ok"
+  },
+  {
+    "input": "上海概伦电子股份有限公司",
+    "matched": "概伦电子",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "https://www.primarius-tech.com",
+    "hit_eda": "Y",
+    "latency_sec": 4.209,
+    "status": "ok"
+  },
+  {
+    "input": "上海广立微电子股份有限公司",
+    "matched": "上海广立微电子股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 7.987,
+    "status": "ok"
+  },
+  {
+    "input": "上海国微思尔芯技术股份有限公司",
+    "matched": "上海国微思尔芯技术股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 7.735,
+    "status": "ok"
+  },
+  {
+    "input": "芯华章科技股份有限公司",
+    "matched": "芯华章科技股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 10.382,
+    "status": "ok"
+  },
+  {
+    "input": "北京芯愿景软件技术股份有限公司",
+    "matched": "北京芯愿景软件技术股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.991,
+    "status": "ok"
+  },
+  {
+    "input": "北京行芯科技有限公司",
+    "matched": "北京行芯科技有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.404,
+    "status": "ok"
+  },
+  {
+    "input": "上海合见工业软件集团有限公司",
+    "matched": "上海合见工业软件集团有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.368,
+    "status": "ok"
+  },
+  {
+    "input": "北京东方晶源微电子科技股份有限公司",
+    "matched": "北京东方晶源微电子科技股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.754,
+    "status": "ok"
+  },
+  {
+    "input": "上海阿卡思微电子技术有限公司",
+    "matched": "上海阿卡思微电子技术有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.818,
+    "status": "ok"
+  },
+  {
+    "input": "苏州芯和半导体科技股份有限公司",
+    "matched": "苏州芯和半导体科技股份有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.625,
+    "status": "ok"
+  },
+  {
+    "input": "南京集成电路设计服务产业创新中心",
+    "matched": "南京集成电路设计服务产业创新中心",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.938,
+    "status": "ok"
+  },
+  {
+    "input": "Empyrean Software",
+    "matched": "EmpyreanSoftware有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.645,
+    "status": "ok"
+  },
+  {
+    "input": "Primarius Technologies",
+    "matched": "PrimariusTechnologies有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.006,
+    "status": "ok"
+  },
+  {
+    "input": "Xpeedic Technology Co., Ltd.",
+    "matched": "XpeedicTechnologyCo.,Ltd.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.373,
+    "status": "ok"
+  },
+  {
+    "input": "Synopsys Inc.",
+    "matched": "SynopsysInc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.545,
+    "status": "ok"
+  },
+  {
+    "input": "Cadence Design Systems, Inc.",
+    "matched": "CadenceDesignSystems,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.951,
+    "status": "ok"
+  },
+  {
+    "input": "Siemens EDA",
+    "matched": "SiemensEDA有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.177,
+    "status": "ok"
+  },
+  {
+    "input": "Mentor Graphics Corporation",
+    "matched": "MentorGraphicsCorporation有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.246,
+    "status": "ok"
+  },
+  {
+    "input": "ANSYS, Inc.",
+    "matched": "ANSYS,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.761,
+    "status": "ok"
+  },
+  {
+    "input": "Keysight Technologies, Inc.",
+    "matched": "KeysightTechnologies,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.243,
+    "status": "ok"
+  },
+  {
+    "input": "Silvaco Group, Inc.",
+    "matched": "SilvacoGroup,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.245,
+    "status": "ok"
+  },
+  {
+    "input": "Aldec, Inc.",
+    "matched": "Aldec,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.918,
+    "status": "ok"
+  },
+  {
+    "input": "Cliosoft, Inc.",
+    "matched": "Cliosoft,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.363,
+    "status": "ok"
+  },
+  {
+    "input": "MunEDA GmbH",
+    "matched": "MunEDAGmbH有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.765,
+    "status": "ok"
+  },
+  {
+    "input": "Real Intent, Inc.",
+    "matched": "RealIntent,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 5.113,
+    "status": "ok"
+  },
+  {
+    "input": "Agnisys, Inc.",
+    "matched": "Agnisys,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.621,
+    "status": "ok"
+  },
+  {
+    "input": "OneSpin Solutions GmbH",
+    "matched": "OneSpinSolutionsGmbH有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.92,
+    "status": "ok"
+  },
+  {
+    "input": "Apache Design Solutions, Inc.",
+    "matched": "ApacheDesignSolutions,Inc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 4.441,
+    "status": "ok"
+  },
+  {
+    "input": "Zuken Inc.",
+    "matched": "ZukenInc.有限公司",
+    "l1": "电子信息",
+    "l2": "半导体EDA",
+    "website": "",
+    "hit_eda": "Y",
+    "latency_sec": 6.104,
+    "status": "ok"
+  }
+]

@@ -267,6 +267,147 @@ const COMPANY_INDUSTRY_OVERRIDES = [
     l1: '电子信息',
     l2: '半导体芯片',
   },
+  // EDA focused overrides (Chinese + international)
+  {
+    names: ['Synopsys', 'Synopsys Inc', 'Synopsys, Inc.', '新思科技'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Cadence', 'Cadence Design Systems', 'Cadence Design Systems, Inc.', '楷登电子'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Siemens EDA', 'Mentor Graphics', 'Mentor Graphics Corporation', '西门子EDA', '明导国际'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Ansys', 'ANSYS, Inc.', 'Ansys EDA'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Keysight EDA', 'Keysight Technologies', '是德科技EDA'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Silvaco', 'Silvaco Group'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Empyrean', 'Empyrean Software', '华大九天'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Primarius', 'Primarius Technologies', '概伦电子'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Xpeedic', 'Xpeedic Technology', '速石科技'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Semitronix', 'Semitronix Corporation', '广立微'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['上海广立微电子股份有限公司', '广立微电子'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['上海合见工业软件集团有限公司', '合见工软', '合见工业软件'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['上海国微思尔芯技术股份有限公司', '思尔芯', '国微思尔芯'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['芯华章科技股份有限公司', '芯华章'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['北京芯愿景软件技术股份有限公司', '芯愿景'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['北京行芯科技有限公司', '行芯科技'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['北京东方晶源微电子科技股份有限公司', '东方晶源'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['上海阿卡思微电子技术有限公司', '阿卡思微电子'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['苏州芯和半导体科技股份有限公司', '芯和半导体', 'Xpeedic'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['南京集成电路设计服务产业创新中心'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Aldec', 'Aldec, Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Cliosoft', 'Cliosoft, Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['MunEDA', 'MunEDA GmbH'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Real Intent', 'Real Intent, Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Agnisys', 'Agnisys, Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['OneSpin', 'OneSpin Solutions GmbH'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Apache Design Solutions', 'Apache Design Solutions, Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
+  {
+    names: ['Zuken', 'Zuken Inc.'],
+    l1: '电子信息',
+    l2: '半导体EDA',
+  },
   {
     names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'],
     l1: '服务业',
