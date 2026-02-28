@@ -423,6 +423,11 @@ const COMPANY_INDUSTRY_OVERRIDES = [
     l1: '服务业',
     l2: '广播电视与新媒体',
   },
+  {
+    names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'],
+    l1: '信息技术',
+    l2: '云计算与企业软件',
+  },
   // Electronic components / connectors / switches strong overrides
   {
     names: ['立讯精密工业股份有限公司', '立讯精密', '立讯'],
@@ -646,6 +651,7 @@ const COMPANY_INDUSTRY_OVERRIDES = [
   },
 ];
 const COMPANY_WEBSITE_OVERRIDES = [
+  { names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'], website: 'https://ones.cn' },
   { names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'], website: 'https://www.cjltv.com' },
   { names: ['江苏恒瑞医药股份有限公司', '恒瑞医药'], website: 'https://www.hengrui.com' },
   { names: ['趋势科技', '趋势科技(中国)有限公司', '趋势科技网络（中国）有限公司'], website: 'https://www.trendmicro.com.cn' },
