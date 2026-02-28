@@ -424,7 +424,7 @@ const COMPANY_INDUSTRY_OVERRIDES = [
     l2: '广播电视与新媒体',
   },
   {
-    names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'],
+    names: ['深圳复临科技有限公司', '复临科技', '深圳复临科技'],
     l1: '信息技术',
     l2: '云计算与企业软件',
   },
@@ -651,14 +651,15 @@ const COMPANY_INDUSTRY_OVERRIDES = [
   },
 ];
 const COMPANY_WEBSITE_OVERRIDES = [
-  { names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'], website: 'https://ones.cn' },
+  { names: ['深圳复临科技有限公司', '复临科技', '深圳复临科技'], website: 'https://ones.cn' },
   { names: ['长江龙新媒体有限公司', '长江龙新媒体', 'cjltv'], website: 'https://www.cjltv.com' },
   { names: ['江苏恒瑞医药股份有限公司', '恒瑞医药'], website: 'https://www.hengrui.com' },
   { names: ['趋势科技', '趋势科技(中国)有限公司', '趋势科技网络（中国）有限公司'], website: 'https://www.trendmicro.com.cn' },
 ];
 const EXACT_NON_LISTED_PROFILE_OVERRIDES = [
   {
-    names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'],
+    names: ['深圳复临科技有限公司', '复临科技', '深圳复临科技'],
+    canonicalName: '深圳复临科技有限公司',
     l1: '信息技术',
     l2: '云计算与企业软件',
     website: 'https://ones.cn',
@@ -3764,12 +3765,13 @@ async function resolveCompanyContext(q) {
   };
   const exactNonListedOverride = findExactNonListedProfileOverrideByName(query);
   if (exactNonListedOverride) {
+    const canonical = sanitizeLegalEntityName(exactNonListedOverride.canonicalName || query) || sanitizeLegalEntityName(query) || query;
     const out = {
-      candidate: { code: '', name: sanitizeLegalEntityName(query) || query, secid: '' },
+      candidate: { code: '', name: canonical, secid: '' },
       secid: '',
       profile: {
         code: '',
-        name: sanitizeLegalEntityName(query) || query,
+        name: canonical,
         industryName: exactNonListedOverride.l2 || '',
         industryCode: '',
         website: exactNonListedOverride.website || websiteOverrideByName(query) || '',
