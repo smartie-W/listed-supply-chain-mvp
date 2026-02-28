@@ -656,6 +656,14 @@ const COMPANY_WEBSITE_OVERRIDES = [
   { names: ['江苏恒瑞医药股份有限公司', '恒瑞医药'], website: 'https://www.hengrui.com' },
   { names: ['趋势科技', '趋势科技(中国)有限公司', '趋势科技网络（中国）有限公司'], website: 'https://www.trendmicro.com.cn' },
 ];
+const EXACT_NON_LISTED_PROFILE_OVERRIDES = [
+  {
+    names: ['深圳复临科技股份有限公司', '深圳复临科技有限公司', '复临科技', '深圳复临科技'],
+    l1: '信息技术',
+    l2: '云计算与企业软件',
+    website: 'https://ones.cn',
+  },
+];
 const COMPANY_CODE_ALIASES = {
   '603501': ['韦尔股份', '豪威集团', '豪威集成电路'],
   '002920': ['德赛西威', '汽车电子'],
@@ -1425,6 +1433,19 @@ function findIndustryOverrideByName(name = '') {
     if (overrideNameHit(q, ov?.name || '')) return { names: [ov.name], l1: ov.l1, l2: ov.l2 };
   }
   return null;
+}
+
+function findExactNonListedProfileOverrideByName(name = '') {
+  const q = sanitizeLegalEntityName(name);
+  if (!q) return null;
+  const overrideNameHit = (queryName = '', candidateName = '') => {
+    const qs = sanitizeLegalEntityName(queryName);
+    const cs = sanitizeLegalEntityName(candidateName);
+    if (!qs || !cs) return false;
+    return qs === cs || coreCompanyName(qs) === coreCompanyName(cs);
+  };
+  const hit = EXACT_NON_LISTED_PROFILE_OVERRIDES.find((ov) => (ov.names || []).some((n) => overrideNameHit(q, n)));
+  return hit || null;
 }
 
 function evidenceRow(name, opts = {}) {
@@ -3741,6 +3762,28 @@ async function resolveCompanyContext(q) {
       pb: 0,
     };
   };
+  const exactNonListedOverride = findExactNonListedProfileOverrideByName(query);
+  if (exactNonListedOverride) {
+    const out = {
+      candidate: { code: '', name: sanitizeLegalEntityName(query) || query, secid: '' },
+      secid: '',
+      profile: {
+        code: '',
+        name: sanitizeLegalEntityName(query) || query,
+        industryName: exactNonListedOverride.l2 || '',
+        industryCode: '',
+        website: exactNonListedOverride.website || websiteOverrideByName(query) || '',
+        totalMarketValue: 0,
+        circulatingMarketValue: 0,
+        peTtm: 0,
+        pb: 0,
+      },
+      nonListed: true,
+      fastProfile: true,
+    };
+    cacheSet(ctxCacheKey, out, 20 * 60 * 1000);
+    return out;
+  }
   const c500 = findChina500ByName(query);
   if (c500) {
     const out = {
@@ -4271,17 +4314,17 @@ const server = http.createServer(async (req, res) => {
 
     const ctx = await resolveCompanyContext(q);
     if (!ctx) return json(res, { company: null, competitors: [], top5: [], suppliers: [], customers: [] });
-    const { candidate, secid, profile, nonListed } = ctx;
+    const { candidate, secid, profile, nonListed, fastProfile } = ctx;
     const code = profile.code || candidate.code || '';
 
     const [revenue, brokerMeta, annual, financing, discoveredSite, listedSite, webIndustryHint] = await Promise.all([
       code ? withTimeout(fetchRevenue(code), 3000, { revenue: null, fiscalYear: null, source: '' }) : Promise.resolve({ revenue: null, fiscalYear: null, source: '' }),
       code ? withTimeout(brokerMetaForStock(code), 2500, { indvInduCode: '', indvInduName: '' }) : Promise.resolve({ indvInduCode: '', indvInduName: '' }),
       code ? withTimeout(extractAnnualRelations(code, 2024), 6500, { customers: [], suppliers: [], meta: { found: false } }) : Promise.resolve({ customers: [], suppliers: [], meta: { found: false } }),
-      nonListed ? withTimeout(fetchNonListedFinancing(profile.name || candidate.name, 6), 3500, { roundsCount: null, events: [], source: '' }) : Promise.resolve({ roundsCount: null, events: [], source: '' }),
-      nonListed && !profile.website ? withTimeout(discoverOfficialWebsite(profile.name || candidate.name), 5000, '') : Promise.resolve(profile.website || ''),
+      nonListed && !fastProfile ? withTimeout(fetchNonListedFinancing(profile.name || candidate.name, 6), 3500, { roundsCount: null, events: [], source: '' }) : Promise.resolve({ roundsCount: null, events: [], source: '' }),
+      nonListed && !profile.website && !fastProfile ? withTimeout(discoverOfficialWebsite(profile.name || candidate.name), 5000, '') : Promise.resolve(profile.website || ''),
       !nonListed && code && !profile.website ? withTimeout(fetchListedCompanyWebsiteByCode(code), 3500, '') : Promise.resolve(''),
-      nonListed ? withTimeout(inferIndustryByWeb(profile.name || candidate.name), 8000, '') : Promise.resolve(''),
+      nonListed && !fastProfile ? withTimeout(inferIndustryByWeb(profile.name || candidate.name), 8000, '') : Promise.resolve(''),
     ]);
     const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
     const industryName = brokerMeta.indvInduName || profile.industryName || '';
@@ -4400,7 +4443,7 @@ const server = http.createServer(async (req, res) => {
       suppliers = suppliers.length ? suppliers : buildSemiconLinkageRows('upstream', profile.name || candidate.name, 6);
       customers = customers.length ? customers : buildSemiconLinkageRows('downstream', profile.name || candidate.name, 6);
     }
-    if (!isFinancialReviewIndustry && !isChina500Fast && (!customers.length || !suppliers.length)) {
+    if (!isFinancialReviewIndustry && !isChina500Fast && !fastProfile && (!customers.length || !suppliers.length)) {
       const [customersFetched, suppliersFetched] = await Promise.all([
         customers.length
           ? Promise.resolve(customers)
