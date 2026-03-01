@@ -1048,9 +1048,45 @@ function buildKnownCodeNameMap() {
     '688008': '澜起科技',
     '600745': '闻泰科技',
     '601211': '国泰海通',
+    '002241': '歌尔股份',
   };
   for (const [k, v] of Object.entries(hardcoded)) push(k, v);
   return m;
+}
+function buildKnownNameCodeMap() {
+  const m = new Map();
+  const push = (name = '', code = '') => {
+    const n = sanitizeLegalEntityName(name);
+    const c = String(code || '').replace(/\D/g, '');
+    if (!n || !/^\d{6}$/.test(c)) return;
+    m.set(normalizeName(n), c);
+    const noLtdTail = normalizeName(stripCompanyOnlyTail(n));
+    if (noLtdTail && noLtdTail.length >= 2) m.set(noLtdTail, c);
+    const core = normalizeName(coreCompanyName(n));
+    if (core && core.length >= 3) m.set(core, c);
+  };
+  for (const x of localCompanies) {
+    const code = String(x?.stockCode || '').replace(/\.(SH|SZ)$/i, '').replace(/\D/g, '');
+    push(x?.fullName || '', code);
+    push(x?.shortName || '', code);
+  }
+  for (const [code, name] of KNOWN_CODE_NAME_MAP.entries()) push(name, code);
+  return m;
+}
+const KNOWN_NAME_CODE_MAP = buildKnownNameCodeMap();
+function knownListedCodeByName(name = '') {
+  const n = sanitizeLegalEntityName(name);
+  if (!n) return '';
+  const keys = [
+    normalizeName(n),
+    normalizeName(stripCompanyOnlyTail(n)),
+    normalizeName(stripLegalTail(n)),
+    normalizeName(coreCompanyName(n)),
+  ].filter(Boolean);
+  for (const key of keys) {
+    if (KNOWN_NAME_CODE_MAP.has(key)) return KNOWN_NAME_CODE_MAP.get(key) || '';
+  }
+  return '';
 }
 
 function toNumberLoose(v) {
@@ -1141,6 +1177,7 @@ function classifyIndustryByCompanyNameOnly(name = '') {
   if (/(汽车|汽集团|一汽|东风|上汽|广汽|长城汽车|比亚迪)/.test(n)) return { l1: '工业', l2: '汽车制造' };
   if (/(通信|电信|联通|移动|铁塔)/.test(n)) return { l1: '服务业', l2: '电信运营' };
   if (/(华为|中兴通讯|联发科技|立讯精密|京东方|TCL)/.test(n)) return { l1: '工业', l2: '电子元件制造' };
+  if (/(精机|精密机械|机床|数控机床|工业母机)/.test(n)) return { l1: '工业', l2: '专用设备制造' };
   if (/(电子元件|电子器件|元器件|连接器|继电器|接插件|端子|电容|电阻|电感|晶振|线路板|PCB)/i.test(n)) return { l1: '工业', l2: '电子元件制造' };
   if (/(电子|半导体|芯片|集成电路|华创|存储|晶圆)/.test(n)) return { l1: '工业', l2: '半导体制造' };
   if (/(厨卫|卫浴|洁具|龙头|花洒|马桶|浴室柜|陶瓷卫浴|五金卫浴|家居建材)/.test(n)) return { l1: '工业', l2: '家居建材' };
@@ -1522,9 +1559,9 @@ function inferIndustryByCompanyName(name = '') {
     { re: /(消费电子|智能终端|可穿戴|手机|平板|耳机|果链)/, l1: '电子信息', l2: '消费电子' },
     { re: /(通信|通信设备|通信技术)/, l1: '电子信息', l2: '通信设备制造' },
     { re: /(网络安全|信息安全|安全技术|安全服务|等保|防病毒|终端安全|态势感知|零信任)/, l1: '信息技术', l2: '网络安全' },
-    { re: /(系统集成|信息系统|运维|技术服务|解决方案|咨询服务|集成服务)/, l1: '信息技术', l2: 'IT服务' },
+    { re: /(系统集成|信息系统|系统科技|信息科技|网络科技|软件科技|数字科技|运维|技术服务|解决方案|咨询服务|集成服务)/, l1: '信息技术', l2: 'IT服务' },
     { re: /(软件|软控|仿真软件|控制软件|信息技术|数字化|网络服务|云计算|大数据|人工智能|计算机|SaaS|平台系统)/, l1: '信息技术', l2: '软件开发' },
-    { re: /(自动化|机器人|装备|机械|智造|工业控制)/, l1: '工业', l2: '智能制造' },
+    { re: /(自动化|机器人|装备|机械|智造|工业控制|精机|机床|工业母机)/, l1: '工业', l2: '智能制造' },
     { re: /(汽车|车载|智驾|座舱|零部件)/, l1: '汽车', l2: '汽车供应链' },
     { re: /(电网|输配电|电气|电力|能源)/, l1: '能源电力', l2: '电网设备' },
     { re: /(医疗|医药|生物|器械|医院|健康)/, l1: '医疗健康', l2: '医疗器械与服务' },
@@ -1559,7 +1596,6 @@ function websiteOverrideByName(name = '') {
 function classifyIndustryDetailed(input = '') {
   const text = String(input || '').replace(/\s+/g, ' ').trim().slice(0, 240);
   const plain = text.replace(/\s+/g, '');
-  const n = normalizeName(text);
   const overrideNameHit = (queryName = '', candidateName = '') => {
     const qn = sanitizeLegalEntityName(queryName);
     const cn = sanitizeLegalEntityName(candidateName);
@@ -1572,9 +1608,7 @@ function classifyIndustryDetailed(input = '') {
     return overlapScoreEnhanced(qn, cn) >= 86;
   };
   for (const ov of dynamicCompanyIndustryOverrides) {
-    const key = normalizeName(ov?.name || '');
-    if (!key) continue;
-    if (n.includes(key) || key.includes(n)) {
+    if (hasStrictLegalNameMatch(text, ov?.name || '')) {
       const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
       return {
         industryLevel1: ov.l1 || item?.l1 || '综合',
@@ -1586,9 +1620,7 @@ function classifyIndustryDetailed(input = '') {
     }
   }
   for (const ov of CHIP_SUBSEGMENT_OVERRIDES) {
-    const key = normalizeName(ov?.name || '');
-    if (!key) continue;
-    if (n.includes(key) || key.includes(n)) {
+    if (hasStrictLegalNameMatch(text, ov?.name || '')) {
       const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
       return {
         industryLevel1: ov.l1 || item?.l1 || '电子信息',
@@ -1613,7 +1645,7 @@ function classifyIndustryDetailed(input = '') {
     }
   }
   for (const ov of SEMICON_TOP150_OVERRIDES) {
-    if (overrideNameHit(text, ov?.name || '')) {
+    if (hasStrictLegalNameMatch(text, ov?.name || '')) {
       const item = INDUSTRY_TAXONOMY.find((x) => x.l2 === ov.l2);
       return {
         industryLevel1: ov.l1 || item?.l1 || '工业',
@@ -1656,11 +1688,11 @@ function classifyIndustryDetailed(input = '') {
     const byName = inferIndustryByCompanyName(text);
     if (byName) return byName;
     return {
-      industryLevel1: '综合',
-      industryLevel2: '综合行业',
-      industryName: '综合行业',
-      upstream: ['半导体', '电子元件', '工业软件', '材料'],
-      downstream: ['制造', '能源', '金融', '医疗'],
+      industryLevel1: '未识别',
+      industryLevel2: '未识别',
+      industryName: '',
+      upstream: [],
+      downstream: [],
     };
   }
   return {
@@ -1675,28 +1707,23 @@ function classifyIndustryDetailed(input = '') {
 function hasStrongIndustryEvidenceForNonListed(name = '', profileIndustry = '', webIndustryHint = '') {
   const n = sanitizeLegalEntityName(name);
   if (!n) return false;
-  if (String(profileIndustry || '').trim()) return true;
   if (String(webIndustryHint || '').trim()) return true;
   if (findChina500ByName(n)) return true;
-  const q = normalizeName(n);
   if (
     dynamicCompanyIndustryOverrides.some((ov) => {
-      const key = normalizeName(ov?.name || '');
-      return key && (q.includes(key) || key.includes(q));
+      return hasStrictLegalNameMatch(n, ov?.name || '');
     })
   ) return true;
   if (
     COMPANY_INDUSTRY_OVERRIDES.some((ov) =>
       (ov.names || []).some((x) => {
-        const key = normalizeName(x);
-        return key && (q.includes(key) || key.includes(q));
+        return hasStrictLegalNameMatch(n, x);
       }),
     )
   ) return true;
   if (
     SEMICON_TOP150_OVERRIDES.some((ov) => {
-      const key = normalizeName(ov?.name || '');
-      return key && (q.includes(key) || key.includes(q));
+      return hasStrictLegalNameMatch(n, ov?.name || '');
     })
   ) return true;
   return false;
@@ -1963,6 +1990,10 @@ function hasStrongCoreMatch(queryName, candidateName) {
 
 function stripLegalTail(name = '') {
   return sanitizeLegalEntityName(name).replace(/(有限责任公司|股份有限公司|集团股份有限公司|集团有限公司|有限公司|总公司|分公司|公司)$/g, '');
+}
+
+function stripCompanyOnlyTail(name = '') {
+  return sanitizeLegalEntityName(name).replace(/(有限责任公司|有限公司|总公司|分公司|公司)$/g, '');
 }
 
 function hasStrictLegalNameMatch(queryName, candidateName) {
@@ -3786,8 +3817,56 @@ async function resolveCompanyContext(q) {
     cacheSet(ctxCacheKey, out, 20 * 60 * 1000);
     return out;
   }
+  const listedCodeByName = knownListedCodeByName(query);
+  if (listedCodeByName) {
+    const secid = mapSecId(listedCodeByName);
+    const profile = (await stockProfile(secid)) || {
+      code: listedCodeByName,
+      name: KNOWN_CODE_NAME_MAP.get(listedCodeByName) || query,
+      industryName: '',
+      industryCode: '',
+      website: websiteOverrideByName(query) || '',
+      totalMarketValue: 0,
+      circulatingMarketValue: 0,
+      peTtm: 0,
+      pb: 0,
+    };
+    const out = {
+      candidate: { code: listedCodeByName, name: profile.name || query, secid },
+      secid,
+      profile,
+      nonListed: false,
+      fastProfile: true,
+    };
+    cacheSet(ctxCacheKey, out, 20 * 60 * 1000);
+    return out;
+  }
   const c500 = findChina500ByName(query);
   if (c500) {
+    const listedCode = knownListedCodeByName(c500.name || query);
+    if (listedCode) {
+      const secid = mapSecId(listedCode);
+      const profile = (await stockProfile(secid)) || {
+        code: listedCode,
+        name: c500.name || KNOWN_CODE_NAME_MAP.get(listedCode) || query,
+        industryName: c500.l2 || '',
+        industryCode: '',
+        website: websiteOverrideByName(c500.name || query) || '',
+        totalMarketValue: 0,
+        circulatingMarketValue: 0,
+        peTtm: 0,
+        pb: 0,
+      };
+      const out = {
+        candidate: { code: listedCode, name: profile.name || c500.name || query, secid },
+        secid,
+        profile,
+        nonListed: false,
+        fastProfile: true,
+      };
+      cacheSet(ctxCacheKey, out, 20 * 60 * 1000);
+      return out;
+    }
     const out = {
       candidate: { code: '', name: c500.name || query, secid: '' },
       secid: '',
@@ -4311,7 +4390,6 @@ const server = http.createServer(async (req, res) => {
 
   if (u.pathname === '/api/enrich') {
     const q = (u.searchParams.get('q') || '').trim();
-    const disableSemiconFallback = ['0', 'false', 'off', 'no'].includes(String(u.searchParams.get('semicon_fallback') || '1').toLowerCase());
     if (!q) return json(res, { company: null, competitors: [], top5: [], suppliers: [], customers: [] });
 
     const ctx = await resolveCompanyContext(q);
@@ -4440,12 +4518,7 @@ const server = http.createServer(async (req, res) => {
     if (annual.suppliers?.length) {
       suppliers = normalizeAnnualRelationRows(annual.suppliers, '年报披露前五供应商');
     }
-    const isSemiconIndustry = SEMICON_REVIEW_INDUSTRIES.has(industry.industryLevel2);
-    if (!disableSemiconFallback && isSemiconIndustry) {
-      suppliers = suppliers.length ? suppliers : buildSemiconLinkageRows('upstream', profile.name || candidate.name, 6);
-      customers = customers.length ? customers : buildSemiconLinkageRows('downstream', profile.name || candidate.name, 6);
-    }
-    if (!isFinancialReviewIndustry && !isChina500Fast && !fastProfile && (!customers.length || !suppliers.length)) {
+    if (!isFinancialReviewIndustry && !isChina500Fast && !fastProfile && !weakNonListedIndustry && (!customers.length || !suppliers.length)) {
       const [customersFetched, suppliersFetched] = await Promise.all([
         customers.length
           ? Promise.resolve(customers)
@@ -4463,10 +4536,6 @@ const server = http.createServer(async (req, res) => {
       if (!competitorsFinal.length) competitorsFinal = buildFinancialPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
       suppliers = suppliers.length ? suppliers : buildFinancialLinkageRows(industry.industryLevel2, 'upstream', profile.name || candidate.name, 8);
       customers = customers.length ? customers : buildFinancialLinkageRows(industry.industryLevel2, 'downstream', profile.name || candidate.name, 8);
-    }
-    if (!disableSemiconFallback && isSemiconIndustry) {
-      suppliers = suppliers.length ? suppliers : buildSemiconLinkageRows('upstream', profile.name || candidate.name, 6);
-      customers = customers.length ? customers : buildSemiconLinkageRows('downstream', profile.name || candidate.name, 6);
     }
     // Suppliers/customers must be entity evidence, never generic industry words.
     // Keep empty if no verifiable chain is found.
@@ -4530,7 +4599,7 @@ const server = http.createServer(async (req, res) => {
         res.end();
         return;
       }
-      const { candidate, secid, profile, nonListed } = ctx;
+      const { candidate, secid, profile, nonListed, fastProfile } = ctx;
       const code = profile.code || candidate.code || '';
       const baseIndustry = classifyIndustryDetailed(`${profile.name || candidate.name || ''} ${profile.industryName || ''}`.trim());
       const isFinancialReviewIndustryBase = FINANCIAL_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2);
@@ -4571,17 +4640,17 @@ const server = http.createServer(async (req, res) => {
       const pAnnual = code
         ? withTimeout(extractAnnualRelations(code, 2024), 7000, { customers: [], suppliers: [], meta: { found: false } })
         : Promise.resolve({ customers: [], suppliers: [], meta: { found: false } });
-      const pFinancing = nonListed
+      const pFinancing = nonListed && !fastProfile
         ? withTimeout(fetchNonListedFinancing(baseCompany.name, 6), 4000, { roundsCount: null, events: [], source: '' })
         : Promise.resolve({ roundsCount: null, events: [], source: '' });
       const pWebsite = (() => {
         const forced = websiteOverrideByName(baseCompany.name) || profile.website || '';
         if (forced) return Promise.resolve(forced);
         if (!nonListed && code) return withTimeout(fetchListedCompanyWebsiteByCode(code), 3500, '');
-        if (nonListed) return withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '');
+        if (nonListed && !fastProfile) return withTimeout(discoverOfficialWebsite(baseCompany.name), 5000, '');
         return Promise.resolve('');
       })();
-      const pWebIndustry = nonListed
+      const pWebIndustry = nonListed && !fastProfile
         ? withTimeout(inferIndustryByWeb(baseCompany.name), 8000, '')
         : Promise.resolve('');
 
@@ -4767,6 +4836,10 @@ const server = http.createServer(async (req, res) => {
 
       const customersTask = withTimeout((async () => {
         const t0 = Date.now();
+        const weakNonListedIndustry =
+          nonListed &&
+          !code &&
+          !hasStrongIndustryEvidenceForNonListed(baseCompany.name || q, profile.industryName || '', '');
         const annual = await pAnnual;
         if (annual.customers?.length) {
           recordPerf('customers', Date.now() - t0);
@@ -4777,22 +4850,22 @@ const server = http.createServer(async (req, res) => {
           recordPerf('customers', Date.now() - t0);
           return linked;
         }
-        if (SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
-          const linked = buildSemiconLinkageRows('downstream', baseCompany.name, 6);
+        if (weakNonListedIndustry) {
           recordPerf('customers', Date.now() - t0);
-          return linked;
+          return [];
         }
         const out = await pickCustomersOnline(code, baseCompany.name, profile.industryName, 20);
         recordPerf('customers', Date.now() - t0);
-        if (!out.length && SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
-          return buildSemiconLinkageRows('downstream', baseCompany.name, 6);
-        }
         if (out.length) return out;
         return [];
       })(), 9000, []);
 
       const suppliersTask = withTimeout((async () => {
         const t0 = Date.now();
+        const weakNonListedIndustry =
+          nonListed &&
+          !code &&
+          !hasStrongIndustryEvidenceForNonListed(baseCompany.name || q, profile.industryName || '', '');
         const annual = await pAnnual;
         if (annual.suppliers?.length) {
           recordPerf('suppliers', Date.now() - t0);
@@ -4803,16 +4876,12 @@ const server = http.createServer(async (req, res) => {
           recordPerf('suppliers', Date.now() - t0);
           return linked;
         }
-        if (SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
-          const linked = buildSemiconLinkageRows('upstream', baseCompany.name, 6);
+        if (weakNonListedIndustry) {
           recordPerf('suppliers', Date.now() - t0);
-          return linked;
+          return [];
         }
         const out = await pickSuppliers(code, baseCompany.name, profile.industryName, 20);
         recordPerf('suppliers', Date.now() - t0);
-        if (!out.length && SEMICON_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2)) {
-          return buildSemiconLinkageRows('upstream', baseCompany.name, 6);
-        }
         if (out.length) return out;
         return [];
       })(), 9000, []);
