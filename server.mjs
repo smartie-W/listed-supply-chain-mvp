@@ -4416,6 +4416,8 @@ const server = http.createServer(async (req, res) => {
       nonListed &&
       !code &&
       !hasStrongIndustryEvidenceForNonListed(profile.name || candidate.name || q, industryName || profile.industryName || '', webIndustryHint || '');
+    const hasAnnualEvidence = Boolean(annual?.meta?.found || (annual?.customers || []).length || (annual?.suppliers || []).length);
+    const strictNonListedNoAnnual = Boolean(nonListed && !hasAnnualEvidence);
     const isFinancialReviewIndustry = FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2);
     const isChina500Fast = Boolean(findChina500ByName(profile.name || candidate.name || q));
     const consultingIntel = isFinancialReviewIndustry
@@ -4439,7 +4441,9 @@ const server = http.createServer(async (req, res) => {
       }));
 
     let top5 = [];
-    if (!weakNonListedIndustry && isFinancialReviewIndustry && nonListed && allowNonListedIndustryFallback(industry)) {
+    if (strictNonListedNoAnnual) {
+      top5 = [];
+    } else if (!weakNonListedIndustry && isFinancialReviewIndustry && nonListed && allowNonListedIndustryFallback(industry)) {
       top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
     } else {
       const preferFineGrainedTop = !nonListed && industry.industryLevel2 && industry.industryLevel2 !== (industryName || '');
@@ -4462,7 +4466,7 @@ const server = http.createServer(async (req, res) => {
       }));
     }
 
-    let competitorsFinal = weakNonListedIndustry
+    let competitorsFinal = weakNonListedIndustry || strictNonListedNoAnnual
       ? []
       : !forceTopDerivedCompetitors && competitors.length
       ? competitors
@@ -4495,14 +4499,14 @@ const server = http.createServer(async (req, res) => {
       competitorsFinal = [...competitorsFinal, ...append].slice(0, 20);
     }
     competitorsFinal = filterByEvidenceTier(competitorsFinal).slice(0, 20);
-    if (!competitorsFinal.length && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       competitorsFinal = buildChina500PeerFallback(
         profile.name || candidate.name,
         industry.industryLevel2,
         peerFallbackLimitByIndustry(industry.industryLevel2),
       );
     }
-    if (!competitorsFinal.length && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       competitorsFinal = buildIndustryPeerFallback(
         industry.industryLevel2,
         profile.name || candidate.name,
@@ -4539,7 +4543,7 @@ const server = http.createServer(async (req, res) => {
     }
     // Suppliers/customers must be entity evidence, never generic industry words.
     // Keep empty if no verifiable chain is found.
-    if (!top5.length && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!top5.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       top5 = await withTimeout(top5ByIndustryNameFallback(industry.industryName || industryName, 5), 5000, []);
     }
     top5 = sanitizeTop5Rows(await fillDisplayNamesByCode(top5), 5);
@@ -4705,6 +4709,7 @@ const server = http.createServer(async (req, res) => {
       const top5Task = withTimeout((async () => {
         const t0 = Date.now();
         const brokerMeta = await pBrokerMeta;
+        const annual = await pAnnual;
         const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
         const industryName = brokerMeta.indvInduName || profile.industryName || '';
         const webIndustryHint = await pWebIndustry;
@@ -4713,6 +4718,12 @@ const server = http.createServer(async (req, res) => {
           nonListed &&
           !code &&
           !hasStrongIndustryEvidenceForNonListed(baseCompany.name || q, industryName || profile.industryName || '', webIndustryHint || '');
+        const hasAnnualEvidence = Boolean(annual?.meta?.found || (annual?.customers || []).length || (annual?.suppliers || []).length);
+        const strictNonListedNoAnnual = Boolean(nonListed && !hasAnnualEvidence);
+        if (strictNonListedNoAnnual) {
+          recordPerf('top5', Date.now() - t0);
+          return { top5: [], industryName: industry.industryName || industryName, industryCode, industry };
+        }
         if (!weakNonListedIndustry && isFinancialReviewIndustryBase && nonListed && allowNonListedBaseFallback) {
           const revenue = await pRevenue;
           const top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
@@ -4755,6 +4766,7 @@ const server = http.createServer(async (req, res) => {
           ? []
           : await withTimeout(fetchConsultingIntel(baseCompany.name, profile.industryName || '', 10), 4500, []);
         const brokerMeta = await pBrokerMeta;
+        const annual = await pAnnual;
         const industryCode = brokerMeta.indvInduCode || profile.industryCode || '';
         const industryName = brokerMeta.indvInduName || profile.industryName || '';
         const webIndustryHint = await pWebIndustry;
@@ -4763,11 +4775,13 @@ const server = http.createServer(async (req, res) => {
           nonListed &&
           !code &&
           !hasStrongIndustryEvidenceForNonListed(baseCompany.name || q, industryName || profile.industryName || '', webIndustryHint || '');
+        const hasAnnualEvidence = Boolean(annual?.meta?.found || (annual?.customers || []).length || (annual?.suppliers || []).length);
+        const strictNonListedNoAnnual = Boolean(nonListed && !hasAnnualEvidence);
         const brokerPeers = industryCode ? await brokerReportIndustryPeers(industryCode, 2) : [];
         const forceTopDerivedCompetitors =
           Boolean(INDUSTRY_HEAD_SEED_CODES[industry.industryLevel2]) &&
           !sameIndustry(industry.industryName || '', industryName || '');
-        let competitors = forceTopDerivedCompetitors
+        let competitors = strictNonListedNoAnnual || forceTopDerivedCompetitors
           ? []
           : brokerPeers
           .filter((x) => String(x.code) !== String(code))
@@ -4781,7 +4795,7 @@ const server = http.createServer(async (req, res) => {
             sourceType: 'broker_report',
             sourceTier: 'tier2',
           }));
-        if (!competitors.length && !weakNonListedIndustry) {
+        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry) {
           const { top5 } = await top5Task;
           competitors = top5
             .filter((x) => String(x.code) !== String(code))
@@ -4816,14 +4830,14 @@ const server = http.createServer(async (req, res) => {
         if (!competitors.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
           competitors = buildFinancialPeerFallback(industry.industryLevel2, baseCompany.name, 10);
         }
-        if (!competitors.length && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
+        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
           competitors = buildChina500PeerFallback(
             baseCompany.name,
             industry.industryLevel2,
             peerFallbackLimitByIndustry(industry.industryLevel2),
           );
         }
-        if (!competitors.length && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
+        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
           competitors = buildIndustryPeerFallback(
             industry.industryLevel2,
             baseCompany.name,
