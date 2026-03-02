@@ -1732,6 +1732,22 @@ function hasStrongIndustryEvidenceForNonListed(name = '', profileIndustry = '', 
   return false;
 }
 
+function applyIndustryEvidenceGate(industry = {}, opts = {}) {
+  const isListed = Boolean(opts?.isListed);
+  const hasWebsiteEvidence = Boolean(opts?.hasWebsiteEvidence);
+  const hasRegistryEvidence = Boolean(opts?.hasRegistryEvidence);
+  const hasAnnualEvidence = Boolean(opts?.hasAnnualEvidence);
+  const allow = isListed || hasWebsiteEvidence || hasRegistryEvidence || hasAnnualEvidence;
+  if (allow) return industry;
+  return {
+    industryLevel1: '未识别',
+    industryLevel2: '未识别',
+    industryName: '',
+    upstream: [],
+    downstream: [],
+  };
+}
+
 function extractIntentToken(query = '') {
   const q = String(query || '');
   for (const t of INTENT_TOKENS) {
@@ -3784,7 +3800,7 @@ async function resolveCompanyContext(q) {
   const ctxCacheKey = `ctx:${sanitizeLegalEntityName(query) || query}`;
   const cachedCtx = cacheGet(ctxCacheKey);
   if (cachedCtx) return cachedCtx;
-  const quickNonListedProfile = (name) => {
+  const quickNonListedProfile = (name, registryEvidence = false) => {
     const industry = classifyIndustryDetailed(String(name || '').trim());
     const website = websiteOverrideByName(name);
     return {
@@ -3797,6 +3813,7 @@ async function resolveCompanyContext(q) {
       circulatingMarketValue: 0,
       peTtm: 0,
       pb: 0,
+      registryEvidence: Boolean(registryEvidence),
     };
   };
   const exactNonListedOverride = findExactNonListedProfileOverrideByName(query);
@@ -3815,6 +3832,7 @@ async function resolveCompanyContext(q) {
         circulatingMarketValue: 0,
         peTtm: 0,
         pb: 0,
+        registryEvidence: true,
       },
       nonListed: true,
       fastProfile: true,
@@ -3835,7 +3853,9 @@ async function resolveCompanyContext(q) {
       circulatingMarketValue: 0,
       peTtm: 0,
       pb: 0,
+      registryEvidence: true,
     };
+    if (typeof profile.registryEvidence !== 'boolean') profile.registryEvidence = true;
     const out = {
       candidate: { code: listedCodeByName, name: profile.name || query, secid },
       secid,
@@ -3861,7 +3881,9 @@ async function resolveCompanyContext(q) {
         circulatingMarketValue: 0,
         peTtm: 0,
         pb: 0,
+        registryEvidence: true,
       };
+      if (typeof profile.registryEvidence !== 'boolean') profile.registryEvidence = true;
       const out = {
         candidate: { code: listedCode, name: profile.name || c500.name || query, secid },
         secid,
@@ -3885,6 +3907,7 @@ async function resolveCompanyContext(q) {
         circulatingMarketValue: 0,
         peTtm: 0,
         pb: 0,
+        registryEvidence: false,
       },
       nonListed: true,
     };
@@ -3910,6 +3933,7 @@ async function resolveCompanyContext(q) {
         circulatingMarketValue: 0,
         peTtm: 0,
         pb: 0,
+        registryEvidence: false,
       },
       nonListed: true,
     };
@@ -3988,7 +4012,7 @@ async function resolveCompanyContext(q) {
       const out = {
         candidate: { code: '', name: strictBest, secid: '' },
         secid: '',
-        profile: quickNonListedProfile(strictBest),
+        profile: quickNonListedProfile(strictBest, strictSorted.length > 0),
         nonListed: true,
       };
       cacheSet(ctxCacheKey, out, 10 * 60 * 1000);
@@ -4034,7 +4058,7 @@ async function resolveCompanyContext(q) {
     const out = {
       candidate: { code: '', name: nonListedName, secid: '' },
       secid: '',
-      profile: quickNonListedProfile(nonListedName),
+      profile: quickNonListedProfile(nonListedName, webNames.some((x) => hasStrictLegalNameMatch(nonListedName, x?.name || ''))),
       nonListed: true,
     };
     cacheSet(ctxCacheKey, out, 10 * 60 * 1000);
@@ -4052,7 +4076,9 @@ async function resolveCompanyContext(q) {
     circulatingMarketValue: 0,
     peTtm: 0,
     pb: 0,
+    registryEvidence: true,
   };
+  if (typeof profile.registryEvidence !== 'boolean') profile.registryEvidence = true;
   if (!profile.website) {
     profile.website = websiteOverrideByName(profile.name || candidate.name || query) || '';
   }
@@ -4422,7 +4448,15 @@ const server = http.createServer(async (req, res) => {
       !code &&
       !hasStrongIndustryEvidenceForNonListed(profile.name || candidate.name || q, industryName || profile.industryName || '', webIndustryHint || '');
     const hasAnnualEvidence = Boolean(annual?.meta?.found || (annual?.customers || []).length || (annual?.suppliers || []).length);
+    const hasWebsiteEvidence = Boolean(website);
+    const hasRegistryEvidence = Boolean(profile.registryEvidence);
     const strictNonListedNoAnnual = Boolean(nonListed && !hasAnnualEvidence);
+    const displayIndustry = applyIndustryEvidenceGate(industry, {
+      isListed: !nonListed,
+      hasWebsiteEvidence,
+      hasRegistryEvidence,
+      hasAnnualEvidence,
+    });
     const isFinancialReviewIndustry = FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2);
     const isChina500Fast = Boolean(findChina500ByName(profile.name || candidate.name || q));
     const consultingIntel = isFinancialReviewIndustry
@@ -4582,9 +4616,9 @@ const server = http.createServer(async (req, res) => {
         isListed: !nonListed,
         name: profile.name || candidate.name,
         secid,
-        industryName: industry.industryName || industryName || profile.industryName || '',
-        industryLevel1: industry.industryLevel1,
-        industryLevel2: industry.industryLevel2,
+        industryName: displayIndustry.industryName || '',
+        industryLevel1: displayIndustry.industryLevel1 || '未识别',
+        industryLevel2: displayIndustry.industryLevel2 || '未识别',
         industryCode: industryCode || profile.industryCode || '',
         website,
         revenue: revenue.revenue,
@@ -4607,6 +4641,12 @@ const server = http.createServer(async (req, res) => {
         customers: annual.customers?.length ? 'annual_report_pdf' : 'web_suggest_fallback',
         suppliers: annual.suppliers?.length ? 'annual_report_pdf' : 'web_suggest_fallback',
         annualReport: annual.meta || { found: false },
+        industryEvidence: {
+          listed: !nonListed,
+          website: hasWebsiteEvidence,
+          registry: hasRegistryEvidence,
+          annual: hasAnnualEvidence,
+        },
         localSearchPool: 'xlsx_uploaded_names_only',
         mode: nonListed ? 'non_listed_web_fallback' : 'listed_mode',
       },
@@ -4631,7 +4671,14 @@ const server = http.createServer(async (req, res) => {
       }
       const { candidate, secid, profile, nonListed, fastProfile } = ctx;
       const code = profile.code || candidate.code || '';
-      const baseIndustry = classifyIndustryDetailed(`${profile.name || candidate.name || ''} ${profile.industryName || ''}`.trim());
+      const baseIndustryRaw = classifyIndustryDetailed(`${profile.name || candidate.name || ''} ${profile.industryName || ''}`.trim());
+      const baseWebsite = websiteOverrideByName(profile.name || candidate.name || q) || profile.website || '';
+      const baseIndustry = applyIndustryEvidenceGate(baseIndustryRaw, {
+        isListed: !nonListed,
+        hasWebsiteEvidence: Boolean(baseWebsite),
+        hasRegistryEvidence: Boolean(profile.registryEvidence),
+        hasAnnualEvidence: false,
+      });
       const isFinancialReviewIndustryBase = FINANCIAL_REVIEW_INDUSTRIES.has(baseIndustry.industryLevel2);
       const allowNonListedBaseFallback = allowNonListedIndustryFallback(baseIndustry);
       const isChina500Fast = Boolean(findChina500ByName(profile.name || candidate.name || q));
@@ -4644,7 +4691,7 @@ const server = http.createServer(async (req, res) => {
         industryLevel1: baseIndustry.industryLevel1,
         industryLevel2: baseIndustry.industryLevel2,
         industryCode: profile.industryCode || '',
-        website: websiteOverrideByName(profile.name || candidate.name || q) || profile.website || '',
+        website: baseWebsite,
         revenue: null,
         fiscalYear: null,
         revenueSource: '',
@@ -4718,9 +4765,18 @@ const server = http.createServer(async (req, res) => {
         })
         .catch(() => {});
       pWebIndustry
-        .then((l2) => {
+        .then(async (l2) => {
           if (!l2) return;
-          const refined = classifyIndustryDetailed(`${baseCompany.name} ${l2}`);
+          const annual = await pAnnual;
+          const site = await pWebsite;
+          const hasAnnualEvidence = Boolean(annual?.meta?.found || (annual?.customers || []).length || (annual?.suppliers || []).length);
+          const refinedRaw = classifyIndustryDetailed(`${baseCompany.name} ${l2}`);
+          const refined = applyIndustryEvidenceGate(refinedRaw, {
+            isListed: !nonListed,
+            hasWebsiteEvidence: Boolean(site || baseCompany.website),
+            hasRegistryEvidence: Boolean(profile.registryEvidence),
+            hasAnnualEvidence,
+          });
           sseWrite(res, 'company_update', {
             company: {
               ...baseCompany,
