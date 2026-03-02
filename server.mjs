@@ -693,6 +693,9 @@ function manualSuggestRows(query = '') {
     }));
 }
 const FINANCIAL_REVIEW_INDUSTRIES = new Set(['银行业', '证券业', '保险', '基金管理', '期货业', '交易所与清算基础设施', '金融科技']);
+// Global guard to prevent template-like output in competitors/top5.
+// When enabled, only explicit evidence-driven pipelines are used.
+const STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 = true;
 const FINANCIAL_PEER_LIBRARY = {
   银行业: [
     { name: '招商银行', code: '600036' },
@@ -3363,9 +3366,11 @@ async function top5ByIndustry(seed) {
     });
   };
   for (const p of peers) pushCandidate(p);
-  const seedCodes = getIndustrySeedCodes(industryName);
-  for (const code of seedCodes) pushCandidate({ code, name: '', industryName, reportCount: 0, brokerCount: 0 });
-  if (seed.code) pushCandidate({ code: seed.code, name: seed.name, industryName, reportCount: 1, brokerCount: 1 });
+  if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5) {
+    const seedCodes = getIndustrySeedCodes(industryName);
+    for (const code of seedCodes) pushCandidate({ code, name: '', industryName, reportCount: 0, brokerCount: 0 });
+    if (seed.code) pushCandidate({ code: seed.code, name: seed.name, industryName, reportCount: 1, brokerCount: 1 });
+  }
   const candidateList = [...candidateMap.values()];
   if (!candidateList.length) return [];
 
@@ -4443,8 +4448,23 @@ const server = http.createServer(async (req, res) => {
     let top5 = [];
     if (strictNonListedNoAnnual) {
       top5 = [];
-    } else if (!weakNonListedIndustry && isFinancialReviewIndustry && nonListed && allowNonListedIndustryFallback(industry)) {
+    } else if (!weakNonListedIndustry && isFinancialReviewIndustry && nonListed && allowNonListedIndustryFallback(industry) && !STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5) {
       top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
+    } else if (STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5) {
+      const top5Raw = await withTimeout(top5ByIndustry({
+        code,
+        name: profile.name || candidate.name,
+        secid,
+        industryName,
+        industryCode,
+      }), 6500, []);
+      const top5Named = await fillDisplayNamesByCode(top5Raw);
+      top5 = top5Named.map((x) => ({
+        ...x,
+        sourceTier: 'tier1',
+        sourceType: 'financial_statement',
+        confidence: Number.isFinite(x.revenue) && x.revenue > 0 ? 0.92 : 0.65,
+      }));
     } else {
       const preferFineGrainedTop = !nonListed && industry.industryLevel2 && industry.industryLevel2 !== (industryName || '');
       const top5Raw =
@@ -4470,6 +4490,8 @@ const server = http.createServer(async (req, res) => {
       ? []
       : !forceTopDerivedCompetitors && competitors.length
       ? competitors
+      : STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5
+      ? []
       : top5
           .filter((x) => String(x.code) !== String(code))
           .slice(0, 10)
@@ -4499,14 +4521,14 @@ const server = http.createServer(async (req, res) => {
       competitorsFinal = [...competitorsFinal, ...append].slice(0, 20);
     }
     competitorsFinal = filterByEvidenceTier(competitorsFinal).slice(0, 20);
-    if (!competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       competitorsFinal = buildChina500PeerFallback(
         profile.name || candidate.name,
         industry.industryLevel2,
         peerFallbackLimitByIndustry(industry.industryLevel2),
       );
     }
-    if (!competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitorsFinal.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       competitorsFinal = buildIndustryPeerFallback(
         industry.industryLevel2,
         profile.name || candidate.name,
@@ -4536,14 +4558,18 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (isFinancialReviewIndustry && !nonListed) {
-      if (!top5.length) top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
-      if (!competitorsFinal.length) competitorsFinal = buildFinancialPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
+      if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !top5.length) {
+        top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, profile.name || candidate.name, 5);
+      }
+      if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitorsFinal.length) {
+        competitorsFinal = buildFinancialPeerFallback(industry.industryLevel2, profile.name || candidate.name, 10);
+      }
       suppliers = suppliers.length ? suppliers : buildFinancialLinkageRows(industry.industryLevel2, 'upstream', profile.name || candidate.name, 8);
       customers = customers.length ? customers : buildFinancialLinkageRows(industry.industryLevel2, 'downstream', profile.name || candidate.name, 8);
     }
     // Suppliers/customers must be entity evidence, never generic industry words.
     // Keep empty if no verifiable chain is found.
-    if (!top5.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
+    if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !top5.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedIndustryFallback(industry))) {
       top5 = await withTimeout(top5ByIndustryNameFallback(industry.industryName || industryName, 5), 5000, []);
     }
     top5 = sanitizeTop5Rows(await fillDisplayNamesByCode(top5), 5);
@@ -4724,7 +4750,7 @@ const server = http.createServer(async (req, res) => {
           recordPerf('top5', Date.now() - t0);
           return { top5: [], industryName: industry.industryName || industryName, industryCode, industry };
         }
-        if (!weakNonListedIndustry && isFinancialReviewIndustryBase && nonListed && allowNonListedBaseFallback) {
+        if (!weakNonListedIndustry && isFinancialReviewIndustryBase && nonListed && allowNonListedBaseFallback && !STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5) {
           const revenue = await pRevenue;
           const top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
           recordPerf('top5', Date.now() - t0);
@@ -4732,7 +4758,15 @@ const server = http.createServer(async (req, res) => {
         }
         const preferFineGrainedTop = !nonListed && industry.industryLevel2 && industry.industryLevel2 !== (industryName || '');
         const top5Raw =
-          ((!weakNonListedIndustry && nonListed && allowNonListedBaseFallback) || preferFineGrainedTop)
+          STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5
+            ? await top5ByIndustry({
+                code,
+                name: baseCompany.name,
+                secid,
+                industryName,
+                industryCode,
+              })
+            : ((!weakNonListedIndustry && nonListed && allowNonListedBaseFallback) || preferFineGrainedTop)
             ? await top5ByIndustryNameFallback(industry.industryName || industryName, 5)
             : await top5ByIndustry({
                 code,
@@ -4748,11 +4782,11 @@ const server = http.createServer(async (req, res) => {
           sourceType: 'financial_statement',
           confidence: Number.isFinite(x.revenue) && x.revenue > 0 ? 0.92 : 0.65,
         }));
-        if (!top5.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !top5.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
           const revenue = await pRevenue;
           top5 = buildFinancialTop5Fallback(industry.industryLevel2, revenue.fiscalYear || 2024, baseCompany.name, 5);
         }
-        if (!top5.length && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !top5.length && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
           top5 = await top5ByIndustryNameFallback(industry.industryName || industryName, 5);
         }
         recordPerf('top5', Date.now() - t0);
@@ -4795,7 +4829,7 @@ const server = http.createServer(async (req, res) => {
             sourceType: 'broker_report',
             sourceTier: 'tier2',
           }));
-        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry) {
           const { top5 } = await top5Task;
           competitors = top5
             .filter((x) => String(x.code) !== String(code))
@@ -4827,17 +4861,17 @@ const server = http.createServer(async (req, res) => {
           competitors = [...competitors, ...append].slice(0, 20);
         }
         competitors = filterByEvidenceTier(competitors).slice(0, 20);
-        if (!competitors.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitors.length && FINANCIAL_REVIEW_INDUSTRIES.has(industry.industryLevel2) && !nonListed) {
           competitors = buildFinancialPeerFallback(industry.industryLevel2, baseCompany.name, 10);
         }
-        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
           competitors = buildChina500PeerFallback(
             baseCompany.name,
             industry.industryLevel2,
             peerFallbackLimitByIndustry(industry.industryLevel2),
           );
         }
-        if (!competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
+        if (!STRICT_EVIDENCE_ONLY_FOR_PEERS_TOP5 && !competitors.length && !strictNonListedNoAnnual && !weakNonListedIndustry && (!nonListed || allowNonListedBaseFallback)) {
           competitors = buildIndustryPeerFallback(
             industry.industryLevel2,
             baseCompany.name,
